@@ -19,8 +19,9 @@ import { prepareProject } from "../prepare.ts";
 
 /**
  * Resolve a `--host` flag value into what Astro/Vite's `server.host` expects.
- * citty (0.1) has no mixed string/boolean arg type, so `host` is declared as a
- * string and a bare `--host` parses as `""` — Node would bind all interfaces
+ * citty has no mixed string/boolean arg type, so `host` is declared as a
+ * string and a bare `--host` parses as `""` (the CLI entry rewrites it to
+ * `--host=` first; see `host-args.ts`) — Node would bind all interfaces
  * for `""`, but Vite's `resolveHostname` treats it as a literal hostname and
  * prints malformed URLs like `http://:4321/`. Match Astro's own `--host`
  * semantics instead: bare flag → `true` (bind all interfaces), `--host
