@@ -30,7 +30,7 @@ Cada página renderiza as tags `<head>` padrão a partir da sua configuração e
 - `og:title` e `og:site_name` — o título da página e o `title` do seu site.
 - `<link rel="canonical">` e `og:url` — a URL absoluta da página (quando `deployment.site` está definido).
 - `og:type` — `article` em posts de blog e entradas de changelog, `website` nos demais casos. Páginas de artigo também emitem `article:published_time` e `article:modified_time` a partir da `date` da página e do carimbo de última modificação.
-- `og:image` — a [imagem OG](#imagens-open-graph) da página. Um card gerado também declara seus `og:image:width`, `og:image:height`, `og:image:type` e `og:image:alt`, para que um rastreador possa dispor o card sem precisar buscá-lo antes; uma `seo.image` fornecida por você não declara nenhum desses, já que seu tamanho e formato são desconhecidos.
+- `og:image` — a [imagem OG](#open-graph-images) da página. Um card gerado também declara seus `og:image:width`, `og:image:height`, `og:image:type` e `og:image:alt`, para que um rastreador possa dispor o card sem precisar buscá-lo antes; uma `seo.image` fornecida por você não declara nenhum desses, já que seu tamanho e formato são desconhecidos.
 - `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` — o card do X. Páginas com imagem recebem a variante ampla `summary_large_image`; páginas sem imagem ainda recebem o card compacto `summary` em vez de serem exibidas como um link simples.
 
 ### Atribuição no X
@@ -126,7 +126,7 @@ seo: {
 }
 ```
 
-Por padrão, cada card é derivado do seu conteúdo e tema — o **título da página** como manchete, o **título do site** como sobretítulo e o **accent** do seu tema para a marca. As imagens são servidas em `/og/<slug>.png`, espelhando cada rota, e são pré-renderizadas como arquivos estáticos mesmo em modo servidor:
+Por padrão, cada card é derivado do seu conteúdo e tema — o **título da página** como manchete, a **descrição da página** como subtítulo (o mesmo texto da sua `og:description`, então `seo.description` prevalece sobre `description`), o **título do site** como sobretítulo e o **accent** do seu tema para a marca. As imagens são servidas em `/og/<slug>.png`, espelhando cada rota, e são pré-renderizadas como arquivos estáticos mesmo em modo servidor:
 
 | Rota da página      | URL da imagem              |
 | ------------------- | -------------------------- |
@@ -152,13 +152,13 @@ Emojis em um título de página ou de site são renderizados como glifos [Twemoj
 
 ### Exiba, oculte ou sobrescreva camadas do card
 
-Além da manchete, o card carrega três camadas opcionais: a **marca** no canto superior esquerdo (seu logotipo, ou um bloco na cor accent com a inicial do título do site), o **subtítulo** abaixo da manchete (a `description` do seu site) e um **rodapé** com o slug do seu repositório (a partir de `github`) e a URL do site — o host do site de deployment mais [`deployment.base`](/docs/deployment#subpath-deploys), de modo que um site de projeto no GitHub Pages exibe `user.github.io/repo`. Sobrescreva qualquer uma delas com um texto seu, ou oculte uma com `false`:
+Além da manchete, o card carrega três camadas opcionais: a **marca** no canto superior esquerdo (seu logotipo, ou um bloco na cor accent com a inicial do título do site), o **subtítulo** abaixo da manchete (a `description` da página, ou a `description` do seu site nas páginas sem uma) e um **rodapé** com o slug do seu repositório (a partir de `github`) e a URL do site — o host do site de deployment mais [`deployment.base`](/docs/deployment#subpath-deploys), de modo que um site de projeto no GitHub Pages exibe `user.github.io/repo`. Sobrescreva qualquer uma delas com um texto seu, ou oculte uma com `false`:
 
 ```ts blume.config.ts lineNumbers
 seo: {
   og: {
     site: "docs.acme.com", // footer URL text, or false to hide it
-    description: false, // hide the subtitle; a string overrides it
+    description: false, // hide the subtitle on every card; a string replaces the site fallback
     logo: false, // no brand mark at all — not even the initial tile
   },
 }
@@ -289,7 +289,7 @@ Publique seu próprio `public/sitemap.xml` para assumir o controle — o Blume n
 
 ## Robots
 
-O Blume escreve um `robots.txt` que permite todos os rastreadores, declara seus [sinais de conteúdo](#sinais-de-conteudo) e adiciona uma linha `Sitemap:` apontando para o sitemap quando há um disponível. Ativado por padrão:
+O Blume escreve um `robots.txt` que permite todos os rastreadores, declara seus [sinais de conteúdo](#content-signals) e adiciona uma linha `Sitemap:` apontando para o sitemap quando há um disponível. Ativado por padrão:
 
 ```ts blume.config.ts lineNumbers
 seo: {

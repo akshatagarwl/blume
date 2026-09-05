@@ -125,7 +125,7 @@ seo: {
 }
 ```
 
-デフォルトでは、各カードはコンテンツとテーマから導出されます。**ページタイトル**が見出し、**サイトタイトル**がアイブロウ、テーマの**アクセント**がマークになります。画像は各ルートを反映した `/og/<slug>.png` で配信され、サーバーモードでも静的ファイルとしてプリレンダリングされます。
+デフォルトでは、各カードはコンテンツとテーマから導出されます。**ページタイトル**が見出し、**ページの説明**がサブタイトル（`og:description` と同じテキストなので、`description` よりも `seo.description` が優先されます）、**サイトタイトル**がアイブロウ、テーマの**アクセント**がマークになります。画像は各ルートを反映した `/og/<slug>.png` で配信され、サーバーモードでも静的ファイルとしてプリレンダリングされます。
 
 | ページのルート      | 画像 URL                   |
 | ------------------- | -------------------------- |
@@ -151,13 +151,13 @@ seo:
 
 ### カードのレイヤーを表示・非表示・上書きする
 
-見出しに加えて、カードには 3 つのオプションレイヤーがあります。左上の**ブランドマーク**（ロゴ、またはサイトタイトルの頭文字を入れたアクセントタイル）、見出しの下の**サブタイトル**（サイトの `description`）、そしてリポジトリのスラッグ（`github` から）とサイトの URL を含む**フッター**です。フッターの URL はデプロイサイトのホストに [`deployment.base`](/docs/deployment#subpath-deploys) を加えたもので、GitHub Pages のプロジェクトサイトなら `user.github.io/repo` と表示されます。いずれも独自の文字列で上書きするか、`false` で非表示にできます。
+見出しに加えて、カードには 3 つのオプションレイヤーがあります。左上の**ブランドマーク**（ロゴ、またはサイトタイトルの頭文字を入れたアクセントタイル）、見出しの下の**サブタイトル**（ページの `description`、説明のないページではサイトの `description`）、そしてリポジトリのスラッグ（`github` から）とサイトの URL を含む**フッター**です。フッターの URL はデプロイサイトのホストに [`deployment.base`](/docs/deployment#subpath-deploys) を加えたもので、GitHub Pages のプロジェクトサイトなら `user.github.io/repo` と表示されます。いずれも独自の文字列で上書きするか、`false` で非表示にできます。
 
 ```ts blume.config.ts lineNumbers
 seo: {
   og: {
     site: "docs.acme.com", // footer URL text, or false to hide it
-    description: false, // hide the subtitle; a string overrides it
+    description: false, // hide the subtitle on every card; a string replaces the site fallback
     logo: false, // no brand mark at all — not even the initial tile
   },
 }

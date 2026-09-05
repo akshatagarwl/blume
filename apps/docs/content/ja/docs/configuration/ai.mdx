@@ -82,6 +82,8 @@ ai:
 
 エージェントが `.md` の規約を知っている必要はありません。ページ自身の URL を [`Accept: text/markdown`](https://acceptmarkdown.com) ヘッダー付きでリクエストすると、同じアドレスで Markdown 版が配信され、キャッシュが両者を区別できるように `Vary: Accept` が付きます。開発サーバーは標準でこのヘッダーを尊重し、[Vercel または Cloudflare のサーバービルド](/docs/deployment#server-rendering)では同じネゴシエーションがデプロイに自動的に組み込まれます（Vercel ではルーティングルール、Cloudflare では生成された Worker 経由）。設定は不要です。ホームページは、コンテンツページではなくカスタムのランディングページであっても常にネゴシエーションを行います。その Markdown ミラーは [`llms.txt`](#llmstxt) の索引にフォールバックするため、サイトルートに Markdown を求めたエージェントはサイトの機械可読なマップを得られます。Markdown のレスポンスには `x-markdown-tokens` ヘッダー（トークン数の推定値。1 トークンあたり約 4 文字）も付きます。これは [Cloudflare の Markdown for Agents](https://developers.cloudflare.com/fundamentals/reference/markdown-for-agents/) の慣習に従ったもので、Blume がレスポンスヘッダーを制御できるすべての面（開発サーバー、サーバーレンダリングされたレスポンス、Vercel および Cloudflare 上でネゴシエーションされるホームページ）に付与されます。それ以外のデプロイ先はリクエスト時のフックを持たない静的レイヤーからプリレンダリング済みページを配信するため、そこではエージェントが `.md` の URL を直接取得します。[エージェント可読性マニフェスト](#agent-readability)は、ヘッダーを尊重するデプロイでのみ `contentNegotiation` を告知します。
 
+存在しないページもネゴシエーションを行います。すべてのビルドは `/404.md` に Markdown 版の [404 ページ](/docs/advanced/custom-pages#404-page)を出力し（not-found のメッセージに続いて、すべてのトップレベルセクション、サイトマップ、`llms.txt` への復帰リンクが並びます）、Vercel では、Markdown を優先する存在しない URL へのリクエスト、または背後にページのない `.md` URL に対して、HTML のシェルではなく本物の `404` ステータス付きでその本文が返されます。
+
 ### カスタムコンポーネントのシリアライザー
 
 `ai.markdownComponents`（JSX 名からシリアライザーへのマップ）を使うと、独自のコンポーネントに Markdown 表現を与えられます。各シリアライザーは、コンポーネントの `props`（MDX の属性から静的に評価され、ページの `frontmatter` がスコープに入ります）、`children`（すでに Markdown へダウンレベル済み）、およびページの `frontmatter` データを受け取り、置き換える内容を返します。JSX をそのまま残すには `null` を返します。
@@ -109,6 +111,8 @@ export default defineConfig({
 ## Copy as Markdown
 
 すべてのページには、目次の下の[ページアクション](/docs/content/navigation#page-actions)に **Copy as Markdown** アクションがあり、そのページの生の Markdown をクリップボードにコピーします。これは上記の [`.md` URL](#raw-markdown) で配信されるものと同じソースで、LLM や Issue、メモにそのまま貼り付けられます。設定不要で、開発環境でも本番環境でも、すべてのページで利用できます。
+
+Clipboard API が利用できない場合やブラウザーがそれを拒否した場合（アプリ内ブラウザー、WebView、安全でないオリジンなど）、このアクションは従来のコピーコマンドにフォールバックし、それでもクリップボードに何も入らなければ、ボタンは黙ったままにせず **Copy failed**（`actions.copyFailed` でローカライズされます）と表示します。同じフォールバックが、Blume がレンダリングするすべてのコピーボタンを支えています。
 
 ## Open in chat
 

@@ -6,63 +6,63 @@ sidebar:
   label: FAQ
 ---
 
-Respostas para perguntas que surgem com frequência. Está a faltar alguma? [Abra uma issue](https://github.com/haydenbleasel/blume/issues) ou pergunte ao assistente na página.
+Respostas para perguntas que aparecem com frequência. Falta alguma? [Abra uma issue](https://github.com/haydenbleasel/blume/issues) ou pergunte ao assistente na própria página.
 
-## Em que é que o Blume é diferente do Mintlify, do Fumadocs e de outros?
+## Em que o Blume é diferente do Mintlify, do Fumadocs e de outros?
 
-A maioria das ferramentas de documentação situa-se num de dois extremos. **Plataformas geridas** como o Mintlify dão-lhe um resultado polido rapidamente, mas a construção e o alojamento são o serviço deles — escreve dentro do sistema deles e publica na infraestrutura deles. **Bibliotecas de componentes e starters** como o Fumadocs, o Nextra ou o Docusaurus são open-source e flexíveis, mas entregam-lhe uma aplicação (um projeto Next.js ou React) que tem de montar, ligar e manter antes e depois de escrever uma única palavra.
+A maioria das ferramentas de documentação fica em um de dois extremos. **Plataformas gerenciadas** como o Mintlify entregam um resultado polido rápido, mas o build e a hospedagem são o serviço deles — você escreve dentro do sistema deles e publica na infraestrutura deles. **Bibliotecas de componentes e starters** como o Fumadocs, o Nextra ou o Docusaurus são open-source e flexíveis, mas entregam para você um aplicativo (um projeto Next.js ou React) que você precisa montar, conectar e manter antes e depois de escrever uma única palavra.
 
-O Blume segue um terceiro caminho: **a framework é o template.** Aponta-o para uma pasta de Markdown e ele gera e conduz o site inteiro — navegação, pesquisa, temas, imagens Open Graph, SEO e endpoints de IA — sem nenhuma aplicação para gerir. É totalmente open-source e auto-alojável, portanto não há serviço gerido nem dependência de fornecedor, mas também não há boilerplate para manter.
+O Blume segue um terceiro caminho: **o framework é o template.** Você aponta ele para uma pasta de Markdown e ele gera e conduz o site inteiro — navegação, busca, temas, imagens Open Graph, SEO e endpoints de IA — sem nenhum app para cuidar. É totalmente open-source e você mesmo pode hospedar, então não existe serviço gerenciado nem dependência de fornecedor, mas também não existe boilerplate para manter.
 
 |  | Blume | Mintlify | Fumadocs / Nextra / Docusaurus |
 | --- | --- | --- | --- |
-| **Modelo** | Framework de configuração zero; apenas conteúdo | Plataforma alojada | Biblioteca + aplicação que monta |
+| **Modelo** | Framework de configuração zero; só conteúdo | Plataforma hospedada | Biblioteca + app que você monta |
 | **Código-fonte** | Open-source (MIT) | Núcleo fechado | Open-source |
-| **Alojamento** | Em qualquer lado — estático ou uma função de servidor | A infraestrutura gerida deles | Em qualquer lado; você constrói e publica |
-| **Você mantém** | O seu Markdown | O seu Markdown + configuração da plataforma | O seu Markdown + a aplicação à volta dele |
-| **Renderização** | Astro; o tema principal não envia JS de cliente | O runtime deles | Runtime React/Next.js |
-| **Funcionalidades de IA** | `llms.txt`, Markdown em bruto, Ask AI, MCP — integrados, sem serviço alojado | Integradas (alojadas) | Traga as suas |
+| **Hospedagem** | Em qualquer lugar — estático ou uma função de servidor | A infraestrutura gerenciada deles | Em qualquer lugar; você faz o build e publica |
+| **Você mantém** | O seu Markdown | O seu Markdown + configuração da plataforma | O seu Markdown + o app em volta dele |
+| **Renderização** | Astro; o tema principal não envia nenhum JS de cliente | O runtime deles | Runtime React/Next.js |
+| **Recursos de IA** | `llms.txt`, Markdown bruto, Ask AI, MCP — integrados, sem serviço hospedado | Integrados (hospedados) | Traga os seus |
 
-Vale a pena destacar algumas consequências:
+Vale destacar algumas consequências:
 
-- **O resultado é seu.** O `blume build` produz um site simples que aloja na Vercel, Netlify, Cloudflare, S3 ou na sua própria máquina. Nada envia dados para casa.
-- **Sem dependência de fornecedor, com duas saídas.** O seu conteúdo é Markdown portátil, e o `blume eject` transforma o projeto numa aplicação Astro autónoma que continua a usar o pacote `blume` quando quiser controlo total.
-- **Rápido por omissão.** O tema principal não usa React e renderiza HTML estático, por isso as páginas pontuam bem nos Core Web Vitals sem afinações. Adere às funcionalidades de servidor (Ask AI, MCP) apenas quando precisar delas.
-- **Configuração com segurança de tipos.** O `blume.config.ts` e cada `meta.ts` são TypeScript real validado por um esquema — e não YAML com tipagem frouxa.
+- **O resultado é seu.** O `blume build` gera um site simples que você hospeda na Vercel, Netlify, Cloudflare, S3 ou na sua própria máquina. Nada manda dados para casa.
+- **Sem dependência de fornecedor, com duas saídas.** O seu conteúdo é Markdown portátil, e o `blume eject` transforma o projeto em um app Astro autônomo que continua usando o pacote `blume` quando você quiser controle total.
+- **Rápido por padrão.** O tema principal não usa React e renderiza HTML estático, então as páginas vão bem nos Core Web Vitals sem ajuste nenhum. Você adota os recursos de servidor (Ask AI, MCP) só quando precisa deles.
+- **Configuração com segurança de tipos.** O `blume.config.ts` e cada `meta.ts` são TypeScript real validado por um schema — e não YAML de tipagem frouxa.
 
 :::note
-Isto não é "melhor do que tudo" — plataformas geridas e frameworks completas são a escolha certa quando quer um produto alojado ou controlo máximo sobre a aplicação. O Blume é para equipas que querem um site de documentação de nível de produção sem terem de gerir nem a plataforma nem a canalização.
+Isso não é "melhor que tudo" — plataformas gerenciadas e frameworks completos são a escolha certa quando você quer um produto hospedado ou controle máximo sobre o app. O Blume é para times que querem um site de documentação de nível de produção sem ter que cuidar nem da plataforma nem da encanação.
 :::
 
-Consulte [Porque existe o Blume](/docs) para a versão mais longa.
+Veja [Por que o Blume existe](/docs) para a versão mais longa.
 
 ## O Blume é gratuito e open-source?
 
-Sim — o Blume é licenciado sob MIT e é gratuito. Instala o pacote `blume`, mantém o seu conteúdo no seu próprio repositório e aloja a build onde quiser. Não há nível pago, nem preço por utilizador, nem conta para criar. O código-fonte está no [GitHub](https://github.com/haydenbleasel/blume).
+Sim — o Blume tem licença MIT e é gratuito. Você instala o pacote `blume`, mantém o seu conteúdo no seu próprio repositório e hospeda o build onde quiser. Não tem plano pago, nem preço por usuário, nem conta para criar. O código-fonte está no [GitHub](https://github.com/haydenbleasel/blume).
 
-## Preciso de saber Astro, React ou Tailwind?
+## Preciso saber Astro, React ou Tailwind?
 
-Não. Uma pasta de Markdown é um site completo — a navegação, a pesquisa e os temas são inferidos ou definidos com um punhado de tokens. Só recorre à stack subjacente quando quiser personalizar: [ilhas interativas](/docs/content/islands) (React), [substituições de componentes](/docs/configuration/customization) ou [tokens de tema](/docs/configuration/theming) (Tailwind). Mesmo assim, o [`blume.config.ts`](/docs/configuration) é tipado, por isso o seu editor guia-o.
+Não. Uma pasta de Markdown é um site completo — navegação, busca e temas são inferidos ou definidos com um punhado de tokens. Você só recorre à stack por baixo quando quiser personalizar: [ilhas interativas](/docs/content/islands) (React), [substituições de componentes](/docs/configuration/customization) ou [tokens de tema](/docs/configuration/theming) (Tailwind). E, mesmo assim, o [`blume.config.ts`](/docs/configuration) é tipado, então o seu editor te guia.
 
 ## Posso usar componentes React e MDX?
 
-Sim. Qualquer página pode ser `.md` ou `.mdx`, e o MDX permite-lhe inserir os [componentes integrados](/docs/content/components) sem imports. Também pode adicionar as suas próprias [ilhas](/docs/content/islands) `.tsx`/`.jsx` — o Blume ativa automaticamente o React apenas nas páginas que as usam, para que o tema principal continue livre de JavaScript em todo o resto.
+Sim. Qualquer página pode ser `.md` ou `.mdx`, e o MDX permite inserir os [componentes integrados](/docs/content/components) sem imports. Você também pode adicionar as suas próprias [ilhas](/docs/content/islands) `.tsx`/`.jsx` — o Blume ativa o React automaticamente só nas páginas que as usam, então o tema principal continua livre de JavaScript em todo o resto.
 
-## Onde o posso publicar?
+## Onde posso publicar?
 
-Em qualquer lado. O `blume build` gera HTML estático por omissão, que pode servir a partir de qualquer alojamento estático ou CDN — Vercel, Netlify, Cloudflare Pages, GitHub Pages, S3 ou o seu próprio servidor. As funcionalidades exclusivas de servidor (Ask AI, o servidor MCP, renderização a pedido) mudam a build para uma função de servidor através de um adaptador para a Vercel, Node, Netlify ou Cloudflare. Consulte [Publicação](/docs/deployment).
+Em qualquer lugar. O `blume build` gera HTML estático por padrão, que você pode servir de qualquer hospedagem estática ou CDN — Vercel, Netlify, Cloudflare Pages, GitHub Pages, S3 ou o seu próprio servidor. Os recursos exclusivos de servidor (Ask AI, o servidor MCP, renderização sob demanda) mudam o build para uma função de servidor por meio de um adaptador para Vercel, Node, Netlify ou Cloudflare. Veja [Publicação](/docs/deployment).
 
-## A pesquisa precisa de um serviço alojado?
+## A busca precisa de um serviço hospedado?
 
-Não. O [Orama](/docs/configuration/search) constrói um índice local que funciona tanto em desenvolvimento como em produção, sem nada para alojar ou pagar. Para sites muito grandes, o [Pagefind](/docs/configuration/search) está à distância de uma flag. Em qualquer dos casos, o índice é distribuído como parte do seu site.
+Não. O [Orama](/docs/configuration/search) monta um índice local que funciona tanto em desenvolvimento quanto em produção, sem nada para hospedar ou pagar. Para sites muito grandes, o [Pagefind](/docs/configuration/search) está a uma flag de distância. De qualquer forma, o índice vai junto como parte do seu site.
 
-## Como personalizo o aspeto?
+## Como personalizo a aparência?
 
-Comece pelos [tokens de tema](/docs/configuration/theming) — cor de destaque, tipos de letra, raio e um `theme.css` para tudo o resto que o Tailwind consiga exprimir. Vá mais longe [substituindo componentes integrados](/docs/configuration/customization) ou adicionando [páginas personalizadas](/docs/configuration/customization#custom-pages). Quando quiser o próprio projeto Astro, o [`blume eject`](/docs/reference/cli) entrega-lhe uma aplicação autónoma que continua a usar o pacote `blume`.
+Comece pelos [tokens de tema](/docs/configuration/theming) — cor de destaque, fontes, raio e um `theme.css` para tudo o mais que o Tailwind conseguir expressar. Vá além [substituindo componentes integrados](/docs/configuration/customization) ou adicionando [páginas personalizadas](/docs/configuration/customization#custom-pages). Quando você quiser o projeto Astro em si, o [`blume eject`](/docs/reference/cli) entrega um app autônomo que continua usando o pacote `blume`.
 
-## Porque é que o oxfmt / Ultracite está a colapsar as minhas diretivas?
+## Por que o oxfmt / Ultracite está colapsando as minhas diretivas?
 
-Se formatar o seu Markdown com o [Ultracite](https://www.ultracite.ai) (que corre o oxlint + [oxfmt](https://oxc.rs)) — tal como o próprio Blume faz — poderá reparar que as diretivas de contentor ficam achatadas numa única linha depois de uma passagem de formatação:
+Se você formata o seu Markdown com o [Ultracite](https://www.ultracite.ai) (que roda oxlint + [oxfmt](https://oxc.rs)) — como o próprio Blume faz — talvez note que as diretivas de contêiner ficam achatadas em uma única linha depois de uma passagem de formatação:
 
 ```md
 :::note
@@ -70,25 +70,25 @@ Regenerate the project with blume dev.
 :::
 ```
 
-torna-se
+vira
 
 ```md
 :::note Regenerate the project with blume dev. :::
 ```
 
-Assim que a linha de abertura `:::note` é unida à prosa, deixa de ser uma diretiva, pelo que é renderizada como texto literal em vez de um [callout](/docs/content/syntax#callouts).
+Uma vez que a linha de abertura `:::note` é unida à prosa, ela deixa de ser uma diretiva, então é renderizada como texto literal em vez de um [callout](/docs/content/syntax#callouts).
 
-### Porque acontece
+### Por que isso acontece
 
-Isto é um bug no formatador de Markdown do oxfmt (herdado do printer de Markdown do Prettier — ver [prettier/prettier#19040](https://github.com/prettier/prettier/pull/19040)). Quando faz a quebra da prosa, trata as linhas de fence `:::` como texto vulgar e junta-as à linha adjacente, quebrando a diretiva. Afeta todos os tipos de diretiva de contentor — `:::note`, `:::tip`, `:::info`, `:::warning`, `:::danger`, `:::success`.
+Isso é um bug no formatador de Markdown do oxfmt (herdado do printer de Markdown do Prettier — veja [prettier/prettier#19040](https://github.com/prettier/prettier/pull/19040)). Quando ele quebra a prosa, trata as linhas de fence `:::` como texto comum e junta com a linha vizinha, quebrando a diretiva. Isso afeta todos os tipos de diretiva de contêiner — `:::note`, `:::tip`, `:::info`, `:::warning`, `:::danger`, `:::success`.
 
-Reportámos o problema a montante em [oxc-project/oxc#24096](https://github.com/oxc-project/oxc/issues/24096); até ser corrigido lá, o patch abaixo é a solução alternativa.
+Reportamos o problema upstream em [oxc-project/oxc#24096](https://github.com/oxc-project/oxc/issues/24096); até ser corrigido lá, o patch abaixo é a solução alternativa.
 
 ### A correção
 
-Aplique um patch ao oxfmt para que preserve a quebra de linha que fica diretamente encostada a um fence `:::`. O Blume inclui a mesma correção no seu próprio repositório, e pode aplicá-la em qualquer projeto.
+Aplique um patch no oxfmt para que ele preserve a quebra de linha que fica encostada em um fence `:::`. O Blume inclui a mesma correção no próprio repositório, e você pode aplicá-la em qualquer projeto.
 
-1. Guarde o patch como `patches/oxfmt@0.66.0.patch`:
+1. Salve o patch como `patches/oxfmt@0.66.0.patch`:
 
    ```diff patches/oxfmt@0.66.0.patch
    diff --git a/dist/markdown-BgZGxhM2.js b/dist/markdown-BgZGxhM2.js
@@ -142,7 +142,7 @@ Aplique um patch ao oxfmt para que preserve a quebra de linha que fica diretamen
     		case "emphasis": {
    ```
 
-2. Registe-o no `patchedDependencies` do seu gestor de pacotes. Com o Bun ou o pnpm, adicione ao `package.json`:
+2. Registre ele no `patchedDependencies` do seu gerenciador de pacotes. Com o Bun ou o pnpm, adicione ao `package.json`:
 
    ```json package.json
    {
@@ -158,6 +158,6 @@ Aplique um patch ao oxfmt para que preserve a quebra de linha que fica diretamen
    bun install
    ```
 
-:::warning[Fixado a uma versão]
-O patch tem como alvo uma build específica do oxfmt — o seu diff referencia um ficheiro cujo nome tem um hash por versão (`dist/markdown-*.js`). Quando atualizar o oxfmt, regenere o patch (por exemplo, `bun patch oxfmt`) ou verifique se a correção a montante já chegou e se o patch já não é necessário.
+:::warning[Fixado em uma versão]
+O patch tem como alvo um build específico do oxfmt — o diff dele referencia um arquivo cujo nome tem um hash por release (`dist/markdown-*.js`). Quando você atualizar o oxfmt, regere o patch (por exemplo, `bun patch oxfmt`) ou verifique se a correção upstream já chegou e o patch não é mais necessário.
 :::

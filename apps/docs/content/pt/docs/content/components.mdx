@@ -569,7 +569,7 @@ O card lê a instância a partir de [`github.host`](/docs/configuration#github-e
 
 O `Component` renderiza um arquivo de exemplo do diretório `examples/` do seu projeto como uma prévia ao vivo ao lado do seu código-fonte destacado, em abas. Aponte-o para um arquivo com `path` — sua localização dentro de `examples/`, sem a extensão (portanto `examples/counter.tsx` fica `path="counter"`). Exemplos em React, Vue, Svelte e Astro são todos suportados; exemplos de frameworks hidratam, os de Astro renderizam estaticamente. Ele mantém a prévia e o código em sincronia a partir de um único arquivo.
 
-A prévia é renderizada em um frame isolado que os estilos da documentação nunca alcançam — nenhuma margem de texto, tipografia ou elemento visual do tema vaza para o seu componente. O frame recebe o Tailwind (preflight + utilitários extraídos dos seus arquivos de exemplo e de tudo que eles importam), os tokens de design do Blume, para que classes como `bg-background` sigam a paleta do site por padrão, e ele acompanha ao vivo a alternância claro/escuro do site. O painel se dimensiona conforme o exemplo renderizado — e continua acompanhando caso o exemplo cresça ou encolha após o carregamento — com as abas Prévia e Código compartilhando uma mesma altura, de modo que alterná-las nunca desloca a página.
+A prévia é renderizada em um frame isolado que os estilos da documentação nunca alcançam — nenhuma margem de texto, tipografia ou elemento visual do tema vaza para o seu componente. O frame recebe o Tailwind (preflight + utilitários varridos do seu projeto e do seu diretório de exemplos), os tokens de design do Blume, para que classes como `bg-background` sigam a paleta do site por padrão, e ele acompanha ao vivo a alternância claro/escuro do site. O painel se dimensiona conforme o exemplo renderizado — e continua acompanhando caso o exemplo cresça ou encolha após o carregamento — com as abas Prévia e Código compartilhando uma mesma altura, de modo que alterná-las nunca desloca a página.
 
 Para estilizar as prévias com seu próprio design system — digamos, com variáveis do shadcn — aponte `examples.css` para uma folha de estilos. Ela é injetada em cada frame de prévia após os padrões do Blume, então seus tokens prevalecem. Não use `@import "tailwindcss"` nela; o frame já fornece o Tailwind. Tanto `.dark` quanto `[data-theme="dark"]` funcionam para sobrescritas de modo escuro:
 
@@ -623,6 +623,13 @@ export default defineConfig({
 ```astro
 <!-- keyed relative to registry/files-sdk -->
 <Component path="file-list/examples/basic" />
+```
+
+Em um monorepo, os componentes que seus exemplos importam geralmente ficam em um pacote irmão do workspace. O `@source` do Tailwind varre arquivos, não imports: o Blume varre o seu projeto e o diretório `examples` (para onde quer que `source` aponte, mesmo fora do projeto), então uma classe usada apenas dentro daquele pacote irmão não é gerada até você adicionar o pacote à varredura. Faça isso com uma diretiva `@source` no `examples.css` (para os frames de prévia) ou no `theme.css` (para o site), escrita de forma relativa ao arquivo em que ela está — a regra padrão do Tailwind — e o Blume a leva para a folha de estilos gerada:
+
+```css
+/* examples/theme.css */
+@source "../../../packages/ui/src";
 ```
 
 <Component path="counter" />

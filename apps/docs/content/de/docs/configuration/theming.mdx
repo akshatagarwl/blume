@@ -207,6 +207,12 @@ Lege eine `theme.css` im Stammverzeichnis deines Projekts ab, um beliebige Desig
 
 Setze ein Token unter `:root` für den hellen Modus und unter `:root[data-theme="dark"]` für den dunklen Modus. Farb-Tokens haben eigene integrierte Dunkelwerte, die mit der höheren Spezifität des Dunkel-Selektors deklariert sind — eine Überschreibung von `--blume-accent`, `--blume-background` und Konsorten allein unter `:root` gilt daher nur für den hellen Modus. Deklariere zusätzlich den Dunkel-Block, wenn sich beide Modi ändern sollen.
 
+`theme.css` wird in den Tailwind-Einstiegspunkt der Website eingebunden, sodass darin auch Tailwind-Direktiven funktionieren. Die für ein Monorepo entscheidende ist `@source`: Blume durchsucht dein Projekt nach Utility-Klassen, und eine Seite, die Komponenten aus einem benachbarten Workspace-Paket importiert, braucht auch dieses Paket im Scan. Verweise relativ zu `theme.css` darauf — die übliche Tailwind-Regel — und Blume übernimmt den Pfad in das generierte Stylesheet:
+
+```css theme.css lineNumbers
+@source "../../packages/ui/src";
+```
+
 ### Design-Tokens
 
 | Token                       | Steuert                                       |

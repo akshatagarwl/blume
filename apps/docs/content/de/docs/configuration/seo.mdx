@@ -126,7 +126,7 @@ seo: {
 }
 ```
 
-Standardmäßig leitet sich jede Karte aus deinen Inhalten und deinem Theme ab – der **Seitentitel** als Überschrift, der **Titel deiner Site** als Kopfzeile und der **Akzent** deines Themes für die Marke. Bilder werden unter `/og/<slug>.png` ausgeliefert, spiegeln also jede Route, und werden selbst im Server-Modus als statische Dateien vorgerendert:
+Standardmäßig leitet sich jede Karte aus deinen Inhalten und deinem Theme ab – der **Seitentitel** als Überschrift, die **Seitenbeschreibung** als Untertitel (derselbe Text wie ihre `og:description`, sodass `seo.description` Vorrang vor `description` hat), der **Titel deiner Site** als Kopfzeile und der **Akzent** deines Themes für die Marke. Bilder werden unter `/og/<slug>.png` ausgeliefert, spiegeln also jede Route, und werden selbst im Server-Modus als statische Dateien vorgerendert:
 
 | Seitenroute         | Bild-URL                   |
 | ------------------- | -------------------------- |
@@ -152,13 +152,13 @@ Emojis in einem Seitentitel oder Site-Titel werden als [Twemoji](https://github.
 
 ### Kartenebenen anzeigen, ausblenden oder überschreiben
 
-Über die Überschrift hinaus trägt die Karte drei optionale Ebenen: die **Markenkennzeichnung** oben links (dein Logo oder eine Akzentkachel mit dem Anfangsbuchstaben des Site-Titels), den **Untertitel** unter der Überschrift (die `description` deiner Site) und eine **Fußzeile** mit deinem Repo-Slug (aus `github`) und der URL der Site – dem Host der Deployment-Site plus [`deployment.base`](/docs/deployment#subpath-deploys), sodass eine GitHub-Pages-Projektseite als `user.github.io/repo` erscheint. Überschreibe jede davon mit einer eigenen Zeichenkette oder blende eine mit `false` aus:
+Über die Überschrift hinaus trägt die Karte drei optionale Ebenen: die **Markenkennzeichnung** oben links (dein Logo oder eine Akzentkachel mit dem Anfangsbuchstaben des Site-Titels), den **Untertitel** unter der Überschrift (die `description` der Seite oder die `description` deiner Site bei Seiten ohne eigene) und eine **Fußzeile** mit deinem Repo-Slug (aus `github`) und der URL der Site – dem Host der Deployment-Site plus [`deployment.base`](/docs/deployment#subpath-deploys), sodass eine GitHub-Pages-Projektseite als `user.github.io/repo` erscheint. Überschreibe jede davon mit einer eigenen Zeichenkette oder blende eine mit `false` aus:
 
 ```ts blume.config.ts lineNumbers
 seo: {
   og: {
     site: "docs.acme.com", // footer URL text, or false to hide it
-    description: false, // hide the subtitle; a string overrides it
+    description: false, // hide the subtitle on every card; a string replaces the site fallback
     logo: false, // no brand mark at all — not even the initial tile
   },
 }

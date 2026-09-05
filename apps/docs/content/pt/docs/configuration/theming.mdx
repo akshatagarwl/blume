@@ -207,6 +207,12 @@ Coloque um `theme.css` na raiz do seu projeto para sobrescrever qualquer token d
 
 Defina um token em `:root` para o modo claro e em `:root[data-theme="dark"]` para o modo escuro. Os tokens de cor têm valores escuros embutidos distintos, declarados na especificidade mais alta do seletor escuro, então uma sobrescrita apenas em `:root` de `--blume-accent`, `--blume-background` e companhia se aplica somente ao modo claro — declare também o bloco escuro quando ambos os modos devem mudar.
 
+O `theme.css` é embutido no ponto de entrada do Tailwind do site, então diretivas do Tailwind também funcionam nele. A que vale conhecer para um monorepo é `@source`: o Blume analisa seu projeto em busca de classes utilitárias, e uma página que importa componentes de um pacote irmão do workspace precisa que esse pacote também seja analisado. Aponte para ele de forma relativa ao `theme.css` — a regra padrão do Tailwind — e o Blume leva o caminho para a folha de estilos gerada:
+
+```css theme.css lineNumbers
+@source "../../packages/ui/src";
+```
+
 ### Tokens de design
 
 | Token | Controla |

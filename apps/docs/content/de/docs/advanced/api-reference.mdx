@@ -140,6 +140,15 @@ openapi: {
 - `includeInLlms: false` hält sie aus beiden `llms.txt`-Dateien heraus.
 - `noindex: true` fügt Crawler-Noindex-Metadaten hinzu und entfernt die Seiten aus der Sitemap.
 
+Die Meta-Description jeder Operationsseite ist die `description` (oder `summary`) der Operation selbst, gefolgt von einem generierten Satz, der den Endpunkt benennt – „Reference for the `GET /pets` endpoint in the Petstore API.“ –, sodass auch eine Spezifikation aus knappen einzeiligen Zusammenfassungen pro Seite eine eigenständige Beschreibung in Snippet-Länge ausliefert. Dieser Satz ist englisch. Auf einer Website, deren Spezifikationstexte in einer anderen Sprache verfasst sind, setzt du an der Quelle `seoDescriptionSuffix: false`, um ihn wegzulassen und jede Seite allein mit dem verfassten Text zu beschreiben; eine Operation, die weder eine `description` noch eine `summary` hat, fällt auf ihren Titel zurück (`GET /pets`), sodass keine Seite mit leerer Beschreibung ausgeliefert wird:
+
+```ts blume.config.ts lineNumbers
+openapi: {
+  enabled: true,
+  sources: [{ spec: "./openapi.de.json", seoDescriptionSuffix: false }],
+}
+```
+
 Beim [Scalar-Renderer](#der-scalar-renderer) gilt nur `noindex` – eine von Scalar gerenderte Referenz liegt ohnehin außerhalb von Blumes Suche und `llms.txt`, sodass die beiden `include*`-Einstellungen dort nichts bewirken können.
 
 ## Autorisierung
@@ -203,7 +212,7 @@ AsyncAPI-**2.x-Spezifikationen werden automatisch auf 3.x normalisiert** – mit
 
 Codebeispiele sind **protokollbewusst** und richten sich nach dem Binding der Operation (oder dem Protokoll ihrer Server): `wscat` und ein Browser-`WebSocket`-Snippet für WebSockets, `kcat` für Kafka, `mosquitto_pub`/`mosquitto_sub` für MQTT. `codeSamples` filtert diese Auswahl – genauso, wie es beim `openapi`-Block die Sprachen auswählt; ein Protokoll ohne unterstütztes Tool rendert nur das Message-Payload-Beispiel statt eines erfundenen Clients.
 
-Alles oben Dokumentierte gilt unverändert weiter, [`playground`](#try-it-für-events) eingeschlossen: `route`, `sources` mit `label`/`route`, `expandSchemas`, die Flags für die [Indexierung pro Quelle](#indexierung-pro-quelle) sowie die Suchindexierung nach Zusammenfassung und Tag der Operation.
+Alles oben Dokumentierte gilt unverändert weiter, [`playground`](#try-it-für-events) eingeschlossen: `route`, `sources` mit `label`/`route`, `expandSchemas`, die Flags für die [Indexierung pro Quelle](#indexierung-pro-quelle) (`seoDescriptionSuffix` inklusive – der generierte Satz benennt statt eines Endpunkts den Channel und die Aktion) sowie die Suchindexierung nach Zusammenfassung und Tag der Operation.
 
 Mit `renderer: "scalar"` wechselst du zurück zur eingebetteten Scalar-SPA, wo – wie bei OpenAPI – nur `noindex` gilt. Scalar hat keinen eigenen AsyncAPI-Playground; das Embed erkennt den Dokumenttyp automatisch und rendert Channels, Operationen, Messages und einen Models-Abschnitt, dieser Tausch kostet dich also den Composer.
 

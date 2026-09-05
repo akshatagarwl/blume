@@ -568,7 +568,7 @@ Die Karte liest die Instanz aus [`github.host`](/docs/configuration#github-enter
 
 `Component` rendert eine Beispieldatei aus dem Verzeichnis `examples/` deines Projekts als Live-Vorschau neben ihrem hervorgehobenen Quellcode, in Tabs. Richte es mit `path` auf eine Datei aus – ihr Ort unterhalb von `examples/`, ohne Erweiterung (aus `examples/counter.tsx` wird also `path="counter"`). React-, Vue-, Svelte- und Astro-Beispiele werden alle unterstützt; Framework-Beispiele hydrieren, Astro-Beispiele werden statisch gerendert. So bleiben Vorschau und Code aus einer einzigen Datei synchron.
 
-Die Vorschau rendert in einem isolierten Rahmen, den die Doku-Styles nie erreichen – keine Fließtext-Abstände, Typografie oder Theme-Elemente sickern in deine Komponente. Der Rahmen erhält Tailwind (Preflight + Utilities, die aus deinen Beispieldateien und allem, was sie importieren, gescannt werden), Blumes Design-Tokens, sodass Klassen wie `bg-background` standardmäßig der Website-Palette folgen, und er folgt der Hell-/Dunkel-Umschaltung der Website in Echtzeit. Der Bereich passt seine Größe an das gerenderte Beispiel an – und verfolgt das weiter, falls das Beispiel nach dem Laden wächst oder schrumpft – wobei die Tabs „Preview“ und „Code“ dieselbe Höhe teilen, sodass das Umschalten die Seite nie verschiebt.
+Die Vorschau rendert in einem isolierten Rahmen, den die Doku-Styles nie erreichen – keine Fließtext-Abstände, Typografie oder Theme-Elemente sickern in deine Komponente. Der Rahmen erhält Tailwind (Preflight + Utilities, die aus deinem Projekt und deinem Beispielverzeichnis gescannt werden), Blumes Design-Tokens, sodass Klassen wie `bg-background` standardmäßig der Website-Palette folgen, und er folgt der Hell-/Dunkel-Umschaltung der Website in Echtzeit. Der Bereich passt seine Größe an das gerenderte Beispiel an – und verfolgt das weiter, falls das Beispiel nach dem Laden wächst oder schrumpft – wobei die Tabs „Preview“ und „Code“ dieselbe Höhe teilen, sodass das Umschalten die Seite nie verschiebt.
 
 Um Vorschauen mit deinem eigenen Designsystem zu gestalten – etwa mit shadcn-Variablen – richte `examples.css` auf ein Stylesheet aus. Es wird nach Blumes Standardwerten in jeden Vorschaurahmen eingefügt, sodass deine Tokens gewinnen. Verwende darin kein `@import "tailwindcss"`; der Rahmen stellt Tailwind bereits bereit. Sowohl `.dark` als auch `[data-theme="dark"]` funktionieren für Dark-Mode-Overrides:
 
@@ -622,6 +622,13 @@ export default defineConfig({
 ```astro
 <!-- keyed relative to registry/files-sdk -->
 <Component path="file-list/examples/basic" />
+```
+
+In einem Monorepo liegen die Komponenten, die deine Beispiele importieren, meist in einem benachbarten Workspace-Paket. Tailwinds `@source` scannt Dateien, keine Importe: Blume scannt dein Projekt und das `examples`-Verzeichnis (wohin auch immer `source` zeigt, auch außerhalb des Projekts), sodass eine Klasse, die nur innerhalb dieses benachbarten Pakets verwendet wird, erst erzeugt wird, wenn du das Paket zum Scan hinzufügst. Das machst du mit einer `@source`-Direktive in `examples.css` (für die Vorschaurahmen) oder `theme.css` (für die Website), relativ zu der Datei geschrieben, in der sie steht – die übliche Tailwind-Regel – und Blume übernimmt sie in das erzeugte Stylesheet:
+
+```css
+/* examples/theme.css */
+@source "../../../packages/ui/src";
 ```
 
 <Component path="counter" />
