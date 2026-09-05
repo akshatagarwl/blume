@@ -776,6 +776,11 @@ describe("astroConfigTemplate", () => {
     // every link prefetches on hover/viewport to hide the request latency
     // behind user intent.
     expect(out).toContain("prefetch: { prefetchAll: true },");
+    // The runtime's node_modules is a junction shared with every Blume project
+    // that resolves the same package, so Astro's and Vite's caches (the content
+    // data store among them) live inside the runtime dir, never under it.
+    expect(out).toContain('cacheDir: "/p/.blume/.cache/astro",');
+    expect(out).toContain('cacheDir: "/p/.blume/.cache/vite",');
     // Both lazy client-side deps are pre-bundled through the `blume` package so
     // their CJS/UMD entries get ESM interop in dev; the nested form is required
     // because neither is a direct dep of the generated project, and
@@ -867,7 +872,7 @@ describe("astroConfigTemplate", () => {
     // No reactCompilerPath passed, so react() carries no babel block
     // (compiler off) — only the pre-bundle exclude.
     expect(out).toContain(
-      String.raw`react({ exclude: [/\/node_modules\/\.vite\//] })`
+      String.raw`react({ exclude: [/\/node_modules\/\.vite\//, /\/\.cache\/vite\//] })`
     );
     expect(out).toContain("vue()");
     expect(out).toContain("svelte()");
@@ -944,7 +949,7 @@ describe("astroConfigTemplate", () => {
       themePath: THEME_PATH,
     });
     expect(out).toContain(
-      `react({ babel: { plugins: [[${JSON.stringify(compilerPath)}, { target: "19" }]] }, ${String.raw`exclude: [/\/node_modules\/\.vite\//]`} })`
+      `react({ babel: { plugins: [[${JSON.stringify(compilerPath)}, { target: "19" }]] }, ${String.raw`exclude: [/\/node_modules\/\.vite\//, /\/\.cache\/vite\//]`} })`
     );
     // The Babel-injected `react/compiler-runtime` import is invisible to the
     // optimizer's source scan, so it must ride the include list — otherwise its
@@ -968,7 +973,7 @@ describe("astroConfigTemplate", () => {
     });
     expect(out).toContain('import react from "@astrojs/react"');
     expect(out).toContain(
-      String.raw`react({ exclude: [/\/node_modules\/\.vite\//] })`
+      String.raw`react({ exclude: [/\/node_modules\/\.vite\//, /\/\.cache\/vite\//] })`
     );
     expect(out).not.toContain("babel-plugin-react-compiler");
     // No compiler, no injected runtime import — keep it out of the optimizer.
@@ -1772,6 +1777,8 @@ describe("env / package / tsconfig templates", () => {
       );
     }
     expect(out).not.toContain("runtimeModulesPlugin");
+    // Real node_modules after eject: Astro and Vite keep their default caches.
+    expect(out).not.toContain("cacheDir:");
     expect(out).toContain(
       'import { blumeIntegration, includeHmrPlugin, prerenderDepsPlugin } from "blume/astro"'
     );

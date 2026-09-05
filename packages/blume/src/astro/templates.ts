@@ -291,9 +291,38 @@ const adapterRoot = (context: ProjectContext): string =>
  * re-optimization. A blanket `/node_modules/` exclude would instead switch the
  * React Compiler off for Blume's own components in published installs (they
  * resolve under `node_modules/blume/src`, and exclude beats include in the
- * plugin's filter), so only the pre-bundle cache is excluded.
+ * plugin's filter), so only the pre-bundle cache is excluded. The hidden runtime
+ * relocates that cache to `<runtime>/.cache/vite` (see `cacheOptions`), so both
+ * the default and the relocated path are excluded.
  */
-const REACT_EXCLUDE = String.raw`exclude: [/\/node_modules\/\.vite\//]`;
+const REACT_EXCLUDE = String.raw`exclude: [/\/node_modules\/\.vite\//, /\/\.cache\/vite\//]`;
+
+/**
+ * The `cacheDir` entries for the generated config's top level and its `vite`
+ * block. The hidden runtime's `node_modules` is a junction into Blume's own
+ * package directory, and Astro (`node_modules/.astro`: the content data store,
+ * the fonts cache) and Vite (`node_modules/.vite`: pre-bundled deps) both
+ * default their caches under the project's `node_modules`. Two Blume projects
+ * that resolve the same package (a monorepo building docs and a sandbox in
+ * parallel) would therefore share one data store, and each build would serve
+ * the other's content — or 404 on entries the other cleared. Keep every cache
+ * inside the runtime dir instead. An ejected project (`generatedModulesDir`
+ * set) has real `node_modules`, so it keeps the defaults.
+ */
+const runtimeCacheOptions = (
+  context: ProjectContext,
+  generatedModulesDir: string | undefined
+) => {
+  if (generatedModulesDir !== undefined) {
+    return { astro: "", vite: "" };
+  }
+  return {
+    astro: `
+  cacheDir: ${JSON.stringify(`${context.outDir}/.cache/astro`)},`,
+    vite: `
+    cacheDir: ${JSON.stringify(`${context.outDir}/.cache/vite`)},`,
+  };
+};
 
 /**
  * The `react()` integration call. When `compilerPath` is set (the resolved
@@ -468,6 +497,11 @@ export const astroConfigTemplate = (options: {
   integrationBridge?: IntegrationBridgeOptions;
 }): string => {
   const { context, config, needsReact, pages, themePath } = options;
+
+  const { astro: cacheOptions, vite: viteCacheOption } = runtimeCacheOptions(
+    context,
+    options.generatedModulesDir
+  );
   const {
     askPath,
     contentRoutes,
@@ -701,7 +735,7 @@ ${userConfigSetup}export default defineConfig({
   root: ${JSON.stringify(context.outDir)},
   srcDir: ${JSON.stringify(`${context.outDir}/src`)},
   outDir: ${JSON.stringify(astroOutDir(context))},
-  publicDir: ${JSON.stringify(`${context.root}/public`)},
+  publicDir: ${JSON.stringify(`${context.root}/public`)},${cacheOptions}
   output: ${JSON.stringify(deployment.output)},${adapterOption}${sessionOption}${siteOption}${baseOption}${imageOption}${redirectsOption}${i18nOption}${fontsOption}
   integrations: [${integrations.join(", ")}${userIntegrationSpread}],
   markdown: {
@@ -729,7 +763,7 @@ ${userConfigSetup}export default defineConfig({
   // request latency behind the user's intent, so most navigations swap
   // instantly.
   prefetch: { prefetchAll: true },
-  vite: {
+  vite: {${viteCacheOption}
     plugins: [${runtimeModulesPluginEntry}tailwindcss(), includeHmrPlugin(${JSON.stringify(
       `${context.outDir}/src/generated/includes.json`
     )}), prerenderDepsPlugin()],
