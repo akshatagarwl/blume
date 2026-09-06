@@ -334,18 +334,20 @@ const emitVercelNegotiation = async (
   // endpoint stamps it on dev/server-rendered responses itself.
   const rawMarkdown = await buildRawMarkdown(project);
   const home = rawMarkdown["/"];
-  // The Markdown 404 routes point at the prerendered `404.md`; only wire them
-  // when the build actually emitted it (a project that owns `/404` gets none).
-  const notFoundMarkdown = existsSync(
-    join(root, ".vercel", "output", "static", "404.md")
-  );
+  // The Markdown and JSON 404 routes point at the prerendered twins; only
+  // wire each when the build actually emitted it (a project that owns `/404`
+  // gets none).
+  const staticDir = join(root, ".vercel", "output", "static");
   const injected = injectNegotiationRoutes(
     await readFile(configPath, "utf-8"),
     routePaths,
     buildHomeLinkHeader(config, routePaths),
     overrides,
     home ? markdownTokenCount(agentMarkdown(home)) : undefined,
-    notFoundMarkdown
+    {
+      json: existsSync(join(staticDir, "404.json")),
+      markdown: existsSync(join(staticDir, "404.md")),
+    }
   );
   if (injected === null) {
     logger.warn(

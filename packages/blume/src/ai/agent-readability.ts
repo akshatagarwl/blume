@@ -5,6 +5,7 @@ import type { ContentSignalPolicy, ContentSignals } from "../core/schema.ts";
 import { absoluteUrl } from "../core/site-url.ts";
 import { buildRssFeeds } from "../deploy/rss.ts";
 import { hasApiCatalog } from "./api-catalog.ts";
+import { API_PAGES_PATH, API_SEARCH_PATH, OPENAPI_PATH } from "./api/paths.ts";
 
 /** Token map for the machine-readable content-usage echo. */
 const USAGE_TOKENS: [keyof ContentSignalPolicy, string][] = [
@@ -55,9 +56,17 @@ interface WellKnownArtifacts {
   agentSkills?: string;
 }
 
+/** The JSON docs API's entry points; `search` exists on server output only. */
+interface ApiArtifact {
+  openapi: string;
+  pages: string;
+  search?: string;
+}
+
 /** The agent-facing artifact index the manifest publishes. */
 interface AgentArtifacts extends WellKnownArtifacts {
   markdown: { contentNegotiation?: string; pattern: string };
+  api?: ApiArtifact;
   llmsFullTxt?: string;
   llmsTxt?: string;
   mcp?: { discovery: string; url: string };
@@ -76,6 +85,47 @@ export interface AgentReadabilityManifest {
   contentUsage?: Record<string, boolean>;
   repository?: string;
 }
+
+/**
+ * The raw-Markdown mirror pattern. `Accept: text/markdown` negotiation is
+ * advertised only where the deployed site actually honors it — a Vercel
+ * server build, whose routing config gets the rewrite rules (see
+ * `deploy/vercel-negotiation.ts`), and a Cloudflare server build, whose
+ * deploy bundle gets a wrapper Worker (see `deploy/cloudflare-negotiation.ts`).
+ * Static builds and other adapters serve prerendered pages from a static
+ * layer with no request-time hook, so agents there should fetch the `.md`
+ * pattern directly.
+ */
+const markdownArtifact = (
+  config: BlumeProject["config"],
+  abs: (path: string) => string
+): AgentArtifacts["markdown"] => {
+  const negotiates =
+    config.deployment.output === "server" &&
+    (config.deployment.adapter === "vercel" ||
+      config.deployment.adapter === "cloudflare");
+  return negotiates
+    ? { contentNegotiation: "text/markdown", pattern: abs("/{route}.md") }
+    : { pattern: abs("/{route}.md") };
+};
+
+/** The JSON docs API's entry points, or null when the API is off. */
+const apiArtifact = (
+  config: BlumeProject["config"],
+  abs: (path: string) => string
+): ApiArtifact | null => {
+  if (!config.ai.api) {
+    return null;
+  }
+  const api: ApiArtifact = {
+    openapi: abs(OPENAPI_PATH),
+    pages: abs(API_PAGES_PATH),
+  };
+  if (config.deployment.output === "server") {
+    api.search = abs(API_SEARCH_PATH);
+  }
+  return api;
+};
 
 /** The `.well-known` discovery artifacts the site publishes, if any. */
 const wellKnownArtifacts = (
@@ -99,8 +149,9 @@ const wellKnownArtifacts = (
 
 /**
  * Build `agent-readability.json`: a root manifest that indexes the project's
- * agent-facing surface — llms.txt, the raw-Markdown mirrors, the MCP server,
- * Ask AI, sitemap, and feeds — so agents can discover and cite the docs without
+ * agent-facing surface — llms.txt, the raw-Markdown mirrors, the JSON docs
+ * API and its OpenAPI description, the MCP server, Ask AI, sitemap, and feeds
+ * — so agents can discover and cite the docs without
  * scraping HTML. URLs are absolute when a `site` is configured and root-relative
  * (still under `deployment.base`) otherwise. Returns null when the manifest is
  * disabled.
@@ -122,21 +173,13 @@ export const buildAgentReadability = (
     return site ? absoluteUrl(site, based) : based;
   };
 
-  // Advertise `Accept: text/markdown` negotiation only where the deployed site
-  // actually honors it — a Vercel server build, whose routing config gets the
-  // rewrite rules (see `deploy/vercel-negotiation.ts`), and a Cloudflare server
-  // build, whose deploy bundle gets a wrapper Worker (see
-  // `deploy/cloudflare-negotiation.ts`). Static builds and other adapters serve
-  // prerendered pages from a static layer with no request-time hook, so agents
-  // there should fetch the `.md` pattern directly.
-  const negotiates =
-    config.deployment.output === "server" &&
-    (config.deployment.adapter === "vercel" ||
-      config.deployment.adapter === "cloudflare");
-  const markdown: AgentArtifacts["markdown"] = negotiates
-    ? { contentNegotiation: "text/markdown", pattern: abs("/{route}.md") }
-    : { pattern: abs("/{route}.md") };
-  const artifacts: AgentArtifacts = { markdown };
+  const artifacts: AgentArtifacts = {
+    markdown: markdownArtifact(config, abs),
+  };
+  const api = apiArtifact(config, abs);
+  if (api) {
+    artifacts.api = api;
+  }
   if (config.ai.llmsTxt.enabled) {
     artifacts.llmsFullTxt = abs("/llms-full.txt");
     artifacts.llmsTxt = abs("/llms.txt");

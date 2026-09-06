@@ -410,6 +410,7 @@ describe("buildRuntimeData", () => {
     const data = JSON.parse(buildRuntimeData(project));
     expect(data.config.discovery).toStrictEqual({
       agentReadability: true,
+      api: true,
       llmsTxt: true,
       sitemap: false,
     });
@@ -471,7 +472,7 @@ describe("buildRuntimeData", () => {
     const project = await scanProject(
       await writeProject({
         "blume.config.ts": `export default {
-  ai: { llmsTxt: false },
+  ai: { api: false, llmsTxt: false },
   seo: { agentReadability: false },
 };
 `,
@@ -481,6 +482,7 @@ describe("buildRuntimeData", () => {
     const data = JSON.parse(buildRuntimeData(project));
     expect(data.config.discovery).toStrictEqual({
       agentReadability: false,
+      api: false,
       llmsTxt: false,
       sitemap: false,
     });
@@ -1398,6 +1400,15 @@ describe("generateRuntime", () => {
     expect(has("src/pages/changelog.astro")).toBe(true);
     expect(has("src/pages/404.astro")).toBe(true);
     expect(has("src/pages/404.md.ts")).toBe(true);
+    expect(has("src/pages/404.json.ts")).toBe(true);
+    expect(has("src/pages/openapi.json.ts")).toBe(true);
+    expect(has("src/pages/api/docs/pages.json.ts")).toBe(true);
+    expect(has("src/pages/api/docs/pages/[...route].json.ts")).toBe(true);
+    expect(has("src/pages/api/docs/navigation.json.ts")).toBe(true);
+    // Static output: the live endpoints (search, the `/api/` catch-all) are
+    // not written.
+    expect(has("src/pages/api/docs/search.ts")).toBe(false);
+    expect(has("src/pages/api/[...path].ts")).toBe(false);
     expect(has("src/pages/blume-search.json.ts")).toBe(true);
     expect(has("src/pages/[section]/rss.xml.ts")).toBe(true);
     expect(has("src/pages/mcp.ts")).toBe(true);
@@ -1608,9 +1619,82 @@ describe("generateRuntime", () => {
     const out = project.context.outDir;
     await generateRuntime(project);
     // The user's injected `/404` is the only one, so Blume writes no default —
-    // nor its Markdown twin, which would describe a page the user replaced.
+    // nor its Markdown and JSON twins, which would describe a page the user
+    // replaced.
     expect(existsSync(join(out, "src/pages/404.astro"))).toBe(false);
     expect(existsSync(join(out, "src/pages/404.md.ts"))).toBe(false);
+    expect(existsSync(join(out, "src/pages/404.json.ts"))).toBe(false);
+  });
+
+  it("writes the live docs API endpoints on server output and describes them", async () => {
+    const project = await scanProject(
+      await writeProject({
+        "blume.config.ts": `export default {
+  ai: { mcp: { enabled: true, route: "/docs-mcp" } },
+  deployment: { adapter: "node", output: "server", site: "https://example.com" },
+};
+`,
+        "docs/index.md": "# Home\n",
+      })
+    );
+    const out = project.context.outDir;
+    await generateRuntime(project);
+    const has = (rel: string): boolean => existsSync(join(out, rel));
+    expect(has("src/pages/api/docs/search.ts")).toBe(true);
+    expect(has("src/pages/api/[...path].ts")).toBe(true);
+    expect(
+      await readFile(join(out, "src/pages/api/[...path].ts"), "utf-8")
+    ).toContain('{"base":"","site":"https://example.com"}');
+    const spec = await readFile(
+      join(out, "src/pages/openapi.json.ts"),
+      "utf-8"
+    );
+    expect(spec).toContain('"/api/docs/search": {');
+    expect(spec).toContain('"/docs-mcp": {');
+    expect(spec).toContain('"url": "https://example.com"');
+  });
+
+  it("yields the /api/ catch-all to a user rest route and the spec to a public openapi.json", async () => {
+    const project = await scanProject(
+      await writeProject({
+        "blume.config.ts": `export default {
+  deployment: { adapter: "node", output: "server" },
+};
+`,
+        "docs/index.md": "# Home\n",
+        "pages/api/[...all].astro": "<p>mine</p>\n",
+        "public/openapi.json": "{}\n",
+      })
+    );
+    const out = project.context.outDir;
+    await generateRuntime(project);
+    const has = (rel: string): boolean => existsSync(join(out, rel));
+    expect(has("src/pages/api/docs/search.ts")).toBe(true);
+    expect(has("src/pages/api/[...path].ts")).toBe(false);
+    expect(has("src/pages/openapi.json.ts")).toBe(false);
+    // The MCP server is off, so the spec-less API still shares its snapshot.
+    expect(has("src/pages/api/docs/pages.json.ts")).toBe(true);
+  });
+
+  it("writes no docs API when ai.api is off, and no snapshot without MCP", async () => {
+    const project = await scanProject(
+      await writeProject({
+        "blume.config.ts": `export default {
+  ai: { api: false },
+};
+`,
+        "docs/index.md": "# Home\n",
+      })
+    );
+    const out = project.context.outDir;
+    await generateRuntime(project);
+    const has = (rel: string): boolean => existsSync(join(out, rel));
+    expect(has("src/pages/api/docs/pages.json.ts")).toBe(false);
+    expect(has("src/pages/api/docs/pages/[...route].json.ts")).toBe(false);
+    expect(has("src/pages/api/docs/navigation.json.ts")).toBe(false);
+    expect(has("src/pages/openapi.json.ts")).toBe(false);
+    // The 404 twins are independent of the API.
+    expect(has("src/pages/404.json.ts")).toBe(true);
   });
 
   it("skips the default 404 when a 404.md content page owns the route", async () => {

@@ -11,7 +11,9 @@
  * counterpart of the dev-server rewrite in `astro/markdown-negotiation.ts`.
  * The same routing config also answers a *missing* page: a request that
  * prefers Markdown (or asks for a `.md` URL no page backs) gets the
- * prerendered Markdown 404 body with the 404 status, instead of the HTML shell.
+ * prerendered Markdown 404 body with the 404 status, instead of the HTML
+ * shell, and one that prefers JSON (or asks for a `.json` URL) gets the
+ * prerendered problem-details 404.
  */
 
 /**
@@ -26,6 +28,15 @@
  */
 export const ACCEPT_MARKDOWN_HEADER_VALUE =
   "(.*,)?\\s*text/(x-)?markdown(\\s*[;,].*)?$";
+
+/**
+ * The JSON counterpart, for the problem-details 404: `application/json` or
+ * `application/problem+json`. Browsers never send either on a navigation
+ * (the catch-all wildcard does not match), so ordinary page requests are
+ * unaffected.
+ */
+export const ACCEPT_JSON_HEADER_VALUE =
+  "(.*,)?\\s*application/(problem\\+)?json(\\s*[;,].*)?$";
 
 /**
  * A Build Output API route — the subset these helpers read and write. Parsed
@@ -50,10 +61,17 @@ const ACCEPT_MARKDOWN_CONDITION: VercelRoute["has"] = [
   { key: "accept", type: "header", value: ACCEPT_MARKDOWN_HEADER_VALUE },
 ];
 
+const ACCEPT_JSON_CONDITION: VercelRoute["has"] = [
+  { key: "accept", type: "header", value: ACCEPT_JSON_HEADER_VALUE },
+];
+
 const VARY_ACCEPT = { vary: "Accept" };
 
 /** Where the prerendered Markdown 404 (`pages/404.md.ts`) lands. */
 const NOT_FOUND_MARKDOWN_DEST = "/404.md";
+
+/** Where the prerendered JSON 404 (`pages/404.json.ts`) lands. */
+const NOT_FOUND_JSON_DEST = "/404.json";
 
 /** The adapter's own not-found fallback — the anchor the Markdown 404 precedes. */
 const NOT_FOUND_HTML_DEST = "/404.html";
@@ -77,6 +95,30 @@ const NOT_FOUND_MARKDOWN_ROUTES: readonly VercelRoute[] = [
   },
   { dest: NOT_FOUND_MARKDOWN_DEST, src: "^/.*\\.mdx?$", status: 404 },
 ];
+
+/**
+ * The JSON 404's miss-phase routes, the problem-details twin of the Markdown
+ * ones: any path when the client prefers JSON, and any `.json` URL no file
+ * backs. Spliced at the same anchor, after every server route — so the
+ * `/api/` catch-all (which answers its own namespace with a problem document)
+ * has already had its turn.
+ */
+const NOT_FOUND_JSON_ROUTES: readonly VercelRoute[] = [
+  {
+    dest: NOT_FOUND_JSON_DEST,
+    has: ACCEPT_JSON_CONDITION,
+    headers: VARY_ACCEPT,
+    src: "^/.*$",
+    status: 404,
+  },
+  { dest: NOT_FOUND_JSON_DEST, src: "^/.*\\.json$", status: 404 },
+];
+
+/** Which prerendered 404 twins the build emitted, so their routes get wired. */
+export interface NotFoundVariants {
+  json?: boolean;
+  markdown?: boolean;
+}
 
 /**
  * Vercel rejects route `src` patterns longer than 4096 characters, so route
@@ -223,6 +265,7 @@ const isNegotiationRoute = (route: VercelRoute): boolean =>
     (condition) => condition.value === ACCEPT_MARKDOWN_HEADER_VALUE
   ) === true ||
   (route.dest === NOT_FOUND_MARKDOWN_DEST && route.status === 404) ||
+  (route.dest === NOT_FOUND_JSON_DEST && route.status === 404) ||
   (route.continue === true &&
     route.headers?.vary === "Accept" &&
     isString(route.src) &&
@@ -244,10 +287,11 @@ const isNegotiationRoute = (route: VercelRoute): boolean =>
  * platform's mechanism for extensionless static files (e.g. the Web Bot Auth
  * signature directory). The trailing-slash 308 redirect is always spliced in
  * alongside, so slashed duplicates of every page collapse onto the canonical
- * slashless URL. With `notFoundMarkdown` (the build emitted `404.md`), the
- * Markdown 404 routes go into the miss phase right before the adapter's
- * `/404.html` fallback — and nowhere when that fallback is absent, since a
- * `dest` with no file behind it would serve nothing. Returns the updated JSON
+ * slashless URL. For each 404 twin the build emitted (`notFound.markdown` for
+ * `404.md`, `notFound.json` for `404.json`), its routes go into the miss
+ * phase right before the adapter's `/404.html` fallback — and nowhere when
+ * that fallback is absent, since a `dest` with no file behind it would serve
+ * nothing. Returns the updated JSON
  * text (tab-indented, like the adapter's own output), or `null` when there is
  * nowhere safe to splice: an unparsable config, no `routes` array, or no
  * `handle: "filesystem"` marker to anchor the splice.
@@ -258,7 +302,7 @@ export const injectNegotiationRoutes = (
   homeLinkHeader?: string | null,
   contentTypeOverrides?: Record<string, string>,
   homeTokens?: number,
-  notFoundMarkdown = false
+  notFound: NotFoundVariants = {}
 ): string | null => {
   const overrideEntries = Object.entries(contentTypeOverrides ?? {});
   let config: {
@@ -307,12 +351,16 @@ export const injectNegotiationRoutes = (
     ...rewriteRoutes,
     TRAILING_SLASH_REDIRECT
   );
-  if (notFoundMarkdown) {
+  const notFoundRoutes = [
+    ...(notFound.markdown ? NOT_FOUND_MARKDOWN_ROUTES : []),
+    ...(notFound.json ? NOT_FOUND_JSON_ROUTES : []),
+  ];
+  if (notFoundRoutes.length > 0) {
     const fallbackIndex = routes.findIndex(
       (route) => route.status === 404 && route.dest === NOT_FOUND_HTML_DEST
     );
     if (fallbackIndex !== -1) {
-      routes.splice(fallbackIndex, 0, ...NOT_FOUND_MARKDOWN_ROUTES);
+      routes.splice(fallbackIndex, 0, ...notFoundRoutes);
     }
   }
   config.routes = routes;

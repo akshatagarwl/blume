@@ -216,6 +216,8 @@ describe("buildLlmsFiles — agent resources", () => {
     expect(agentResources(index)).toStrictEqual([
       "- [llms-full.txt](https://example.com/llms-full.txt): The full Markdown of every page in one file.",
       "- [Page Markdown](https://example.com/index.md): Append `.md` to any page URL to fetch that page as raw Markdown.",
+      "- [JSON API](https://example.com/api/docs/pages.json): Page index of the JSON docs API; each entry links the page's JSON and Markdown forms. Described by the OpenAPI document at https://example.com/openapi.json.",
+      "- [API catalog](https://example.com/.well-known/api-catalog): RFC 9727 linkset of the APIs documented here.",
       "- [agent-readability.json](https://example.com/agent-readability.json): Manifest of every agent-facing artifact on this site.",
       "- [Sitemap](https://example.com/sitemap.xml): Every indexable page URL with its last-modified date.",
     ]);
@@ -224,7 +226,11 @@ describe("buildLlmsFiles — agent resources", () => {
   it("adds the MCP server, skills index, and API catalog when configured, and drops disabled artifacts", async () => {
     const { index } = await buildLlmsFiles(
       makeProject([makePage("a.md", "/a", "Alpha")], {
-        ai: { mcp: { enabled: true, route: "/docs-mcp" }, skills: "./skills" },
+        ai: {
+          api: false,
+          mcp: { enabled: true, route: "/docs-mcp" },
+          skills: "./skills",
+        },
         deployment: { output: "server", site: "https://example.com/" },
         seo: { agentReadability: false, sitemap: false },
       })

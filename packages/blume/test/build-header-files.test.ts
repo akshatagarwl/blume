@@ -102,8 +102,9 @@ describe("emitHeaderFiles", () => {
     const headers = await readFile(join(staticDir, "_headers"), "utf-8");
     expect(headers).toContain("/*.txt\n  Content-Type: text/plain");
     expect(headers).toContain(
-      '/\n  Link: </agent-readability.json>; rel="describedby"'
+      '/\n  Link: </.well-known/api-catalog>; rel="api-catalog"'
     );
+    expect(headers).toContain('</agent-readability.json>; rel="describedby"');
   });
 
   /**
@@ -118,8 +119,9 @@ describe("emitHeaderFiles", () => {
     const headers = await readFile(join(staticDir, "_headers"), "utf-8");
     expect(headers.startsWith(ADAPTER_RULE.trimEnd())).toBe(true);
     expect(headers).toContain(
-      '/\n  Link: </agent-readability.json>; rel="describedby"'
+      '/\n  Link: </.well-known/api-catalog>; rel="api-catalog"'
     );
+    expect(headers).toContain('</agent-readability.json>; rel="describedby"');
   });
 
   it("treats public/_headers as the opt-out, adapter file or not", async () => {

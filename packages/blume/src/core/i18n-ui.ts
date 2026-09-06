@@ -109,6 +109,8 @@ const uiStringsObject = z.object({
     .prefault({}),
   notFound: z
     .object({
+      /** Label of the OpenAPI description link on the Markdown/JSON 404. */
+      api: z.string().default("JSON API description (openapi.json)"),
       description: z
         .string()
         .default("We couldn't find the page you're looking for."),

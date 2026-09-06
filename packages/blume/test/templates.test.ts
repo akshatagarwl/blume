@@ -10,6 +10,11 @@ import type { ExampleSpec } from "../src/astro/examples.ts";
 import type { IslandSpec } from "../src/astro/islands.ts";
 import { RUNTIME_MODULE_FILES } from "../src/astro/runtime-modules.ts";
 import {
+  apiNavigationTemplate,
+  apiNotFoundTemplate,
+  apiPagesIndexTemplate,
+  apiPageTemplate,
+  apiSearchTemplate,
   askComponentTemplate,
   askEndpointTemplate,
   astroConfigTemplate,
@@ -27,6 +32,7 @@ import {
   mcpEndpointTemplate,
   mcpPageFile,
   mixedbreadSearchEndpointTemplate,
+  notFoundJsonTemplate,
   notFoundMarkdownTemplate,
   notFoundPageTemplate,
   ogEndpointTemplate,
@@ -604,6 +610,9 @@ describe("notFoundMarkdownTemplate", () => {
     expect(out).toContain(
       '...(data.config.discovery.llmsTxt\n    ? [{ href: href("/llms.txt"), label: nf.llms }]\n    : [])'
     );
+    expect(out).toContain(
+      '...(data.config.discovery.api\n    ? [{ href: href("/openapi.json"), label: nf.api }]\n    : [])'
+    );
   });
 
   it("makes internal links absolute when the site is known, leaving external hrefs alone", () => {
@@ -617,6 +626,91 @@ describe("notFoundMarkdownTemplate", () => {
     expect(out).toContain("const based = withBase(path);");
     expect(out).toContain(
       'return data.config.site && based.startsWith("/") && !based.startsWith("//")\n    ? absoluteUrl(data.config.site, based)\n    : based;'
+    );
+  });
+});
+
+describe("notFoundJsonTemplate", () => {
+  it("is a prerendered endpoint serving RFC 9457 problem details", () => {
+    const out = notFoundJsonTemplate();
+    expect(out).toContain("export const prerender = true;");
+    expect(out).toContain('import { problem } from "blume/ai/api/problem.ts";');
+    expect(out).toContain("export function GET()");
+    expect(out).toContain(
+      '"Content-Type": "application/problem+json; charset=utf-8"'
+    );
+    expect(out).toContain('code: "PAGE_NOT_FOUND"');
+    expect(out).toContain("status: 404");
+    expect(out).toContain("title: nf.title");
+    expect(out).toContain("detail: nf.description");
+  });
+
+  it("carries the Markdown twin's recovery set as links and a resolution", () => {
+    const out = notFoundJsonTemplate();
+    expect(out).toContain('{ href: href("/"), label: nf.home }');
+    expect(out).toContain(
+      "...data.navigation.tabs.map((tab) => ({\n    href: href(tab.href ?? tab.path),\n    label: tab.label,\n  }))"
+    );
+    expect(out).toContain(
+      '...(data.config.discovery.sitemap\n    ? [{ href: href("/sitemap.xml"), label: nf.sitemap }]\n    : [])'
+    );
+    expect(out).toContain(
+      '...(data.config.discovery.llmsTxt\n    ? [{ href: href("/llms.txt"), label: nf.llms }]\n    : [])'
+    );
+    expect(out).toContain(
+      '...(data.config.discovery.api\n    ? [{ href: href("/openapi.json"), label: nf.api }]\n    : [])'
+    );
+    expect(out).toContain("  links,");
+    expect(out).toContain(
+      'resolution: nf.suggestions + ": " + links.map((link) => link.href).join(", ")'
+    );
+    expect(out).toContain(
+      'return data.config.site && based.startsWith("/") && !based.startsWith("//")\n    ? absoluteUrl(data.config.site, based)\n    : based;'
+    );
+  });
+});
+
+describe("JSON docs API templates", () => {
+  it("prerenders the page index, per-page documents, and navigation over the shared snapshot", () => {
+    for (const out of [
+      apiPagesIndexTemplate(),
+      apiPageTemplate(),
+      apiNavigationTemplate(),
+    ]) {
+      expect(out).toContain("export const prerender = true;");
+      expect(out).toContain('import data from "blume:mcp-data";');
+      expect(out).toContain('from "blume/ai/api/handlers.ts"');
+    }
+    expect(apiPagesIndexTemplate()).toContain(
+      "return pagesIndexResponse(data);"
+    );
+    expect(apiPageTemplate()).toContain("return pageParams(data);");
+    expect(apiPageTemplate()).toContain(
+      "return pageResponse(data, props.route);"
+    );
+    expect(apiNavigationTemplate()).toContain(
+      "return navigationResponse(data);"
+    );
+  });
+
+  it("serves search live from the same snapshot", () => {
+    const out = apiSearchTemplate();
+    expect(out).toContain("export const prerender = false;");
+    expect(out).toContain('import data from "blume:mcp-data";');
+    expect(out).toContain("const handler = createSearchHandler(data);");
+    expect(out).toContain(
+      "export const GET: APIRoute = ({ request }) => handler(request);"
+    );
+  });
+
+  it("bakes the site context into the API catch-all", () => {
+    const out = apiNotFoundTemplate({ base: "/docs", site: "https://x.dev" });
+    expect(out).toContain("export const prerender = false;");
+    expect(out).toContain(
+      'const context = {"base":"/docs","site":"https://x.dev"};'
+    );
+    expect(out).toContain(
+      "export const ALL: APIRoute = ({ request }) => apiNotFoundResponse(request, context);"
     );
   });
 });

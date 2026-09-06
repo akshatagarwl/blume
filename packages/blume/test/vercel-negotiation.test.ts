@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import {
+  ACCEPT_JSON_HEADER_VALUE,
   ACCEPT_MARKDOWN_HEADER_VALUE,
   buildNegotiationRoutes,
   injectNegotiationRoutes,
@@ -379,7 +380,7 @@ describe("injectNegotiationRoutes", () => {
       null,
       undefined,
       undefined,
-      true
+      { markdown: true }
     );
     const config = JSON.parse(injected ?? "");
     const routes: {
@@ -440,7 +441,7 @@ describe("injectNegotiationRoutes", () => {
       null,
       undefined,
       undefined,
-      true
+      { markdown: true }
     );
     expect(injected).not.toBeNull();
     expect(injected).not.toContain("/404.md");
@@ -453,7 +454,7 @@ describe("injectNegotiationRoutes", () => {
       null,
       undefined,
       undefined,
-      true
+      { markdown: true }
     );
     const twice = injectNegotiationRoutes(
       once ?? "",
@@ -461,13 +462,100 @@ describe("injectNegotiationRoutes", () => {
       null,
       undefined,
       undefined,
-      true
+      { markdown: true }
     );
     expect(twice).toBe(once ?? "");
     expect((once ?? "").match(/\/404\.md/gu)).toHaveLength(2);
     // Dropping the flag on a re-injection removes them again.
     const dropped = injectNegotiationRoutes(once ?? "", ["/docs/a"]);
     expect(dropped).not.toContain("/404.md");
+  });
+
+  it("splices the JSON 404 routes at the same anchor, after the Markdown ones", () => {
+    const injected = injectNegotiationRoutes(
+      JSON.stringify(baseConfig),
+      ["/docs/a"],
+      null,
+      undefined,
+      undefined,
+      { json: true, markdown: true }
+    );
+    const config = JSON.parse(injected ?? "");
+    const routes: {
+      dest?: string;
+      has?: { key: string; type: string; value: string }[];
+      headers?: Record<string, string>;
+      src?: string;
+      status?: number;
+    }[] = config.routes;
+    const fallbackIndex = routes.findIndex(
+      (route) => route.dest === "/404.html"
+    );
+    expect(routes.slice(fallbackIndex - 4, fallbackIndex)).toStrictEqual([
+      {
+        dest: "/404.md",
+        has: [
+          {
+            key: "accept",
+            type: "header",
+            value: ACCEPT_MARKDOWN_HEADER_VALUE,
+          },
+        ],
+        headers: { vary: "Accept" },
+        src: "^/.*$",
+        status: 404,
+      },
+      { dest: "/404.md", src: "^/.*\\.mdx?$", status: 404 },
+      {
+        dest: "/404.json",
+        has: [
+          { key: "accept", type: "header", value: ACCEPT_JSON_HEADER_VALUE },
+        ],
+        headers: { vary: "Accept" },
+        src: "^/.*$",
+        status: 404,
+      },
+      { dest: "/404.json", src: "^/.*\\.json$", status: 404 },
+    ]);
+    // The `.json` route catches JSON URLs no file backs, nothing else.
+    const jsonSrc = new RegExp(routes[fallbackIndex - 1]?.src ?? "", "u");
+    expect(jsonSrc.test("/api/docs/pages/missing.json")).toBe(true);
+    expect(jsonSrc.test("/docs/missing")).toBe(false);
+    expect(jsonSrc.test("/docs/missing.md")).toBe(false);
+
+    // JSON alone, and idempotently.
+    const jsonOnly = injectNegotiationRoutes(
+      JSON.stringify(baseConfig),
+      ["/docs/a"],
+      null,
+      undefined,
+      undefined,
+      { json: true }
+    );
+    expect(jsonOnly).not.toContain("/404.md");
+    expect((jsonOnly ?? "").match(/\/404\.json/gu)).toHaveLength(2);
+    const twice = injectNegotiationRoutes(
+      jsonOnly ?? "",
+      ["/docs/a"],
+      null,
+      undefined,
+      undefined,
+      { json: true }
+    );
+    expect(twice).toBe(jsonOnly ?? "");
+    const dropped = injectNegotiationRoutes(jsonOnly ?? "", ["/docs/a"]);
+    expect(dropped).not.toContain("/404.json");
+  });
+
+  it("matches the JSON accept condition the way the Markdown one does", () => {
+    const accept = new RegExp(ACCEPT_JSON_HEADER_VALUE, "u");
+    expect(accept.test("application/json")).toBe(true);
+    expect(accept.test("application/problem+json")).toBe(true);
+    expect(accept.test("text/html, application/json;q=0.9")).toBe(true);
+    expect(accept.test("application/json, text/plain")).toBe(true);
+    expect(accept.test("*/*")).toBe(false);
+    expect(accept.test("text/html,application/xhtml+xml")).toBe(false);
+    expect(accept.test("application/jsonx")).toBe(false);
   });
 
   it("returns null when there is nowhere to splice", () => {

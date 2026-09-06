@@ -1,15 +1,17 @@
 import { normalizeBasePath } from "../core/base-path.ts";
 import type { ResolvedConfig } from "../core/schema.ts";
 import { API_CATALOG_PATH, hasApiCatalog } from "./api-catalog.ts";
+import { OPENAPI_PATH } from "./api/paths.ts";
 
 /**
  * The homepage `Link` response header (RFC 8288) — agent discovery for the
  * machine-readable surface Blume already publishes. Agents probing a site read
  * this header off `GET /` to find the resources without scraping HTML:
- * `agent-readability.json` and `llms.txt` as `rel="describedby"`, and the
+ * `agent-readability.json` and `llms.txt` as `rel="describedby"`, the OpenAPI
+ * description of the JSON docs API as `rel="service-desc"`, and the
  * homepage's raw-Markdown mirror as `rel="alternate"` (only when the home
- * route is a content page — a user landing page has no mirror). Both rel
- * values are IANA-registered, which agent-readiness checkers require.
+ * route is a content page — a user landing page has no mirror). Every rel
+ * value is IANA-registered, which agent-readiness checkers require.
  *
  * The header is homepage-only by design: the root response is what agents
  * probe, and `agent-readability.json` indexes the rest of the surface (the
@@ -33,6 +35,13 @@ export const buildHomeLinkHeader = (
   if (hasApiCatalog(config)) {
     links.push(
       `<${deployBase}${API_CATALOG_PATH}>; rel="api-catalog"; type="application/linkset+json"`
+    );
+  }
+  // RFC 8631: `service-desc` is the relation for a machine-readable
+  // description of the service — the JSON docs API's OpenAPI document.
+  if (config.ai.api) {
+    links.push(
+      `<${deployBase}${OPENAPI_PATH}>; rel="service-desc"; type="application/json"`
     );
   }
   if (config.seo.agentReadability) {

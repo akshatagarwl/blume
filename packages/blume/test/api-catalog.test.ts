@@ -14,12 +14,36 @@ const configWith = (overrides: BlumeConfigInput = {}) =>
 
 describe("buildApiCatalog", () => {
   it("returns null when the site publishes no APIs", () => {
-    expect(buildApiCatalog(configWith())).toBeNull();
-    expect(hasApiCatalog(configWith())).toBe(false);
+    const config = configWith({ ai: { api: false } });
+    expect(buildApiCatalog(config)).toBeNull();
+    expect(hasApiCatalog(config)).toBe(false);
+  });
+
+  it("catalogs the JSON docs API by default, described by its OpenAPI document", () => {
+    const config = configWith({
+      deployment: { base: "/site", site: "https://docs.example.com" },
+    });
+    const catalog = JSON.parse(buildApiCatalog(config) ?? "");
+    expect(catalog.linkset).toEqual([
+      {
+        anchor: "https://docs.example.com/site/api/docs",
+        "service-desc": [
+          {
+            href: "https://docs.example.com/site/openapi.json",
+            type: "application/json",
+          },
+        ],
+        "service-doc": [
+          { href: "https://docs.example.com/site", type: "text/html" },
+        ],
+      },
+    ]);
+    expect(hasApiCatalog(config)).toBe(true);
   });
 
   it("catalogs an OpenAPI reference with absolute service links", () => {
     const config = configWith({
+      ai: { api: false },
       deployment: { site: "https://docs.example.com" },
       openapi: {
         enabled: true,
@@ -41,6 +65,7 @@ describe("buildApiCatalog", () => {
 
   it("omits service-desc for a local spec file", () => {
     const config = configWith({
+      ai: { api: false },
       openapi: { enabled: true, spec: "./openapi.json" },
     });
     const [entry] = JSON.parse(buildApiCatalog(config) ?? "").linkset;
@@ -52,6 +77,7 @@ describe("buildApiCatalog", () => {
 
   it("mounts Blume-rendered references under basePath and deployment.base", () => {
     const config = configWith({
+      ai: { api: false },
       basePath: "/docs",
       deployment: { base: "/site" },
       openapi: { enabled: true, spec: "./openapi.json" },
@@ -62,7 +88,7 @@ describe("buildApiCatalog", () => {
 
   it("catalogs the hosted MCP server", () => {
     const config = configWith({
-      ai: { mcp: { enabled: true } },
+      ai: { api: false, mcp: { enabled: true } },
       deployment: { site: "https://docs.example.com" },
     });
     const catalog = JSON.parse(buildApiCatalog(config) ?? "");

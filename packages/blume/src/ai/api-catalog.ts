@@ -2,6 +2,7 @@ import { normalizeBasePath, withBasePath } from "../core/base-path.ts";
 import type { ResolvedConfig } from "../core/schema.ts";
 import { absoluteUrl } from "../core/site-url.ts";
 import { resolveReferences } from "../openapi/references.ts";
+import { API_BASE, OPENAPI_PATH } from "./api/paths.ts";
 
 /**
  * RFC 9727 API catalog: a linkset (RFC 9264) at `/.well-known/api-catalog`
@@ -11,7 +12,8 @@ import { resolveReferences } from "../openapi/references.ts";
  * generated, never hand-written: one entry per API, anchored at its docs
  * route (the RFC's own examples anchor on developer-portal pages), with
  * `service-doc` pointing at the rendered reference and `service-desc` at the
- * spec when it lives at a fetchable URL.
+ * spec when it lives at a fetchable URL. The site's own JSON docs API is an
+ * entry too, described by its generated `/openapi.json`.
  */
 
 export const API_CATALOG_PATH = "/.well-known/api-catalog";
@@ -53,6 +55,14 @@ const linksetEntries = (config: ResolvedConfig): LinksetEntry[] => {
       entry["service-desc"] = [{ href: reference.spec }];
     }
     entries.push(entry);
+  }
+
+  if (config.ai.api) {
+    entries.push({
+      anchor: abs(API_BASE),
+      "service-desc": [{ href: abs(OPENAPI_PATH), type: "application/json" }],
+      "service-doc": [{ href: abs("/"), type: "text/html" }],
+    });
   }
 
   if (config.ai.mcp.enabled) {

@@ -138,7 +138,13 @@ export interface BlumeDataConfig {
    * `deployment.site`, the condition under which one is emitted) feeds the
    * 404 page's recovery links rather than the head.
    */
-  discovery: { agentReadability: boolean; llmsTxt: boolean; sitemap: boolean };
+  discovery: {
+    agentReadability: boolean;
+    /** Whether the JSON docs API and its `/openapi.json` are published. */
+    api: boolean;
+    llmsTxt: boolean;
+    sitemap: boolean;
+  };
   favicon: BlumeFavicon;
   feedback: boolean;
   /**

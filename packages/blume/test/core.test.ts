@@ -1644,6 +1644,30 @@ describe("agent-readability.json", () => {
     expect(manifest?.repository).toBe("https://github.com/inthhq/leadtype");
   });
 
+  it("advertises the JSON docs API and its OpenAPI description, with search on server output", () => {
+    const manifest = buildAgentReadability(makeProject([]));
+    expect(manifest?.artifacts.api).toStrictEqual({
+      openapi: "https://example.com/openapi.json",
+      pages: "https://example.com/api/docs/pages.json",
+    });
+    const server = buildAgentReadability(
+      makeProject([], {
+        deployment: {
+          adapter: "node",
+          output: "server",
+          site: "https://example.com",
+        },
+      })
+    );
+    expect(server?.artifacts.api).toStrictEqual({
+      openapi: "https://example.com/openapi.json",
+      pages: "https://example.com/api/docs/pages.json",
+      search: "https://example.com/api/docs/search",
+    });
+    const off = buildAgentReadability(makeProject([], { ai: { api: false } }));
+    expect(off?.artifacts).not.toHaveProperty("api");
+  });
+
   it("advertises the Web Bot Auth directory only when keys are configured", () => {
     const key = { crv: "Ed25519", kty: "OKP", x: "abc" };
     const manifest = buildAgentReadability(

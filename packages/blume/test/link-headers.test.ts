@@ -11,6 +11,7 @@ const asResolvedConfig = <Fixture>(fixture: Fixture): ResolvedConfig =>
 const configWith = (
   overrides: Partial<{
     agentReadability: boolean;
+    api: boolean;
     base: string;
     llmsTxt: boolean;
     mcp: boolean;
@@ -20,6 +21,7 @@ const configWith = (
   // seo fields populated here.
   asResolvedConfig({
     ai: {
+      api: overrides.api ?? false,
       llmsTxt: { enabled: overrides.llmsTxt ?? true },
       mcp: { enabled: overrides.mcp ?? false, route: "/mcp" },
     },
@@ -87,5 +89,20 @@ describe("buildHomeLinkHeader", () => {
       '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"'
     );
     expect(buildHomeLinkHeader(configWith(), [])).not.toContain("api-catalog");
+  });
+
+  it("advertises the OpenAPI description as service-desc (RFC 8631) with the JSON docs API", () => {
+    expect(
+      buildHomeLinkHeader(configWith({ api: true, base: "/base" }), ["/"])
+    ).toBe(
+      [
+        '</base/.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
+        '</base/openapi.json>; rel="service-desc"; type="application/json"',
+        '</base/agent-readability.json>; rel="describedby"; type="application/json"',
+        '</base/llms.txt>; rel="describedby"; type="text/plain"',
+        '</base/index.md>; rel="alternate"; type="text/markdown"',
+      ].join(", ")
+    );
+    expect(buildHomeLinkHeader(configWith(), [])).not.toContain("service-desc");
   });
 });

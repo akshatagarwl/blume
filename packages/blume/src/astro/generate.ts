@@ -25,10 +25,13 @@ import {
 } from "pathe";
 import { glob } from "tinyglobby";
 
+import { OPENAPI_PATH } from "../ai/api/paths.ts";
+import { buildApiSpec } from "../ai/api/spec.ts";
 import { buildAskData } from "../ai/ask-data.ts";
 import { askBackendRuntimeDep, resolveAskBackend } from "../ai/ask.ts";
 import { buildRawMarkdown, markdownRoutePaths } from "../ai/markdown.ts";
 import { buildMcpData } from "../ai/mcp/data.ts";
+import type { McpData } from "../ai/mcp/data.ts";
 import { buildMcpDiscovery, buildMcpServerCard } from "../ai/mcp/discovery.ts";
 import { normalizeBasePath } from "../core/base-path.ts";
 import { validateUsedComponents } from "../core/component-diagnostics.ts";
@@ -125,9 +128,15 @@ import {
   exampleSlug,
   islandMapTemplate,
   islandWrapperTemplate,
+  apiNavigationTemplate,
+  apiNotFoundTemplate,
+  apiPageTemplate,
+  apiPagesIndexTemplate,
+  apiSearchTemplate,
   mcpEndpointTemplate,
   mcpPageFile,
   mixedbreadSearchEndpointTemplate,
+  notFoundJsonTemplate,
   notFoundMarkdownTemplate,
   notFoundPageTemplate,
   ogEndpointTemplate,
@@ -1319,6 +1328,7 @@ export const buildRuntimeData = (project: BlumeProject): string => {
       description: config.description,
       discovery: {
         agentReadability: config.seo.agentReadability,
+        api: config.ai.api,
         llmsTxt: config.ai.llmsTxt.enabled,
         // Mirrors `buildSitemapFiles`: no site, no sitemap.
         sitemap: config.seo.sitemap && Boolean(config.deployment.site),
@@ -1505,20 +1515,32 @@ const planMcp = (
 type RuntimeModules = Map<RuntimeModuleId, string>;
 
 /**
- * Publish the MCP data snapshot (`blume:mcp-data`) and write the server
- * endpoint and discovery documents.
+ * The agent data snapshot (`blume:mcp-data`) behind the MCP server and the
+ * JSON docs API: built once per pass when either is on, published to the
+ * runtime modules, and handed to both writers. Null when neither needs it.
  */
-const writeMcpFiles = async (
+const publishAgentData = async (
   project: BlumeProject,
-  plan: McpPlan,
-  write: (path: string, content: string) => Promise<boolean>,
+  plans: { api: ApiPlan; mcp: McpPlan },
   modules: RuntimeModules
-): Promise<void> => {
-  if (!plan.enabled) {
-    return;
+): Promise<McpData | null> => {
+  if (!(plans.mcp.enabled || plans.api.enabled)) {
+    return null;
   }
   const data = await buildMcpData(project);
   modules.set("blume:mcp-data", JSON.stringify(data));
+  return data;
+};
+
+/** Write the MCP server endpoint and discovery documents. */
+const writeMcpFiles = async (
+  plan: McpPlan,
+  write: (path: string, content: string) => Promise<boolean>,
+  data: McpData | null
+): Promise<void> => {
+  if (!(plan.enabled && data)) {
+    return;
+  }
   const discoveryInput = {
     base: data.base,
     name: data.name,
@@ -1540,6 +1562,115 @@ const writeMcpFiles = async (
       staticJsonEndpointTemplate(buildMcpServerCard(discoveryInput))
     ),
   ]);
+};
+
+/** The resolved plan for the JSON docs API within a single generate pass. */
+interface ApiPlan {
+  /**
+   * Whether the `/api/` catch-all (JSON 404s) is written: server output, and
+   * no user page already owns a rest route under `/api/`.
+   */
+  catchAll: boolean;
+  enabled: boolean;
+  /** Whether the live endpoints (search) are written — server output only. */
+  server: boolean;
+  /**
+   * Whether `/openapi.json` is generated: skipped when a `public/openapi.json`
+   * or a user page owns the route, so a site can publish its own description.
+   */
+  spec: boolean;
+  srcDir: string;
+}
+
+/** Whether a user page pattern is a rest route under `/api/` (`/api/[...x]`). */
+const ownsApiRest = (page: { pattern: string }): boolean =>
+  page.pattern.startsWith("/api/[");
+
+/**
+ * Decide what the JSON docs API generates. The prerendered endpoints always
+ * ride along when the feature is on (they live under Blume's own `/api/docs/`
+ * namespace); the live ones need server output; the OpenAPI description yields
+ * to one the project ships itself.
+ */
+const planApi = (
+  project: BlumeProject,
+  srcDir: string,
+  userPages: { pattern: string }[]
+): ApiPlan => {
+  const { config, context } = project;
+  const server = config.deployment.output === "server";
+  return {
+    catchAll: server && !userPages.some(ownsApiRest),
+    enabled: config.ai.api,
+    server,
+    spec:
+      !routeIsTaken(userPages, project.graph.pages, OPENAPI_PATH) &&
+      !existsSync(join(context.root, "public", "openapi.json")),
+    srcDir,
+  };
+};
+
+/**
+ * Write the JSON docs API: the prerendered page index, per-page documents, and
+ * navigation; on server output the search endpoint and the `/api/` catch-all;
+ * and the OpenAPI description of the whole agent-facing surface. The MCP
+ * route reaches the description only when the server was actually planned (a
+ * collision can disable it), so it never advertises an endpoint that isn't
+ * there.
+ */
+const writeApiFiles = async (
+  project: BlumeProject,
+  plan: ApiPlan,
+  write: (path: string, content: string) => Promise<boolean>,
+  data: McpData | null,
+  mcp: McpPlan
+): Promise<void> => {
+  if (!(plan.enabled && data)) {
+    return;
+  }
+  const { config } = project;
+  const mcpRoute = mcp.enabled ? mcp.route : null;
+  const apiDir = join(plan.srcDir, "pages", "api");
+  const writes = [
+    write(join(apiDir, "docs", "pages.json.ts"), apiPagesIndexTemplate()),
+    write(
+      join(apiDir, "docs", "pages", "[...route].json.ts"),
+      apiPageTemplate()
+    ),
+    write(join(apiDir, "docs", "navigation.json.ts"), apiNavigationTemplate()),
+  ];
+  if (plan.server) {
+    writes.push(write(join(apiDir, "docs", "search.ts"), apiSearchTemplate()));
+  }
+  if (plan.catchAll) {
+    writes.push(
+      write(
+        join(apiDir, "[...path].ts"),
+        apiNotFoundTemplate({ base: data.base, site: data.site })
+      )
+    );
+  }
+  if (plan.spec) {
+    writes.push(
+      write(
+        join(plan.srcDir, "pages", "openapi.json.ts"),
+        staticJsonEndpointTemplate(
+          buildApiSpec({
+            agentReadability: config.seo.agentReadability,
+            base: data.base,
+            description: config.description,
+            llmsTxt: config.ai.llmsTxt.enabled,
+            mcpRoute,
+            name: config.title,
+            search: plan.server,
+            site: data.site,
+            version: data.version,
+          })
+        )
+      )
+    );
+  }
+  await Promise.all(writes);
 };
 
 /**
@@ -1661,10 +1792,12 @@ const writeAskFiles = async (
 /**
  * Write the default 404 page at Astro's reserved `src/pages/404.astro` path so
  * static builds emit `dist/404.html`, plus its Markdown twin at `404.md.ts`
- * (`dist/404.md`) for agents that ask a missing URL for Markdown. Both are
- * skipped when the project already owns `/404` (a custom `pages/404.astro` or
- * a `404.md` content page), letting it be fully overridden without a route
- * collision; `pruneOrphans` then removes any previously-generated copies.
+ * (`dist/404.md`) for agents that ask a missing URL for Markdown and its JSON
+ * twin at `404.json.ts` (`dist/404.json`, RFC 9457 problem details) for those
+ * that ask for JSON. All three are skipped when the project already owns
+ * `/404` (a custom `pages/404.astro` or a `404.md` content page), letting it
+ * be fully overridden without a route collision; `pruneOrphans` then removes
+ * any previously-generated copies.
  */
 const writeNotFoundPage = async (
   write: (path: string, content: string) => Promise<boolean>,
@@ -1678,6 +1811,7 @@ const writeNotFoundPage = async (
   await Promise.all([
     write(join(srcDir, "pages", "404.astro"), notFoundPageTemplate()),
     write(join(srcDir, "pages", "404.md.ts"), notFoundMarkdownTemplate()),
+    write(join(srcDir, "pages", "404.json.ts"), notFoundJsonTemplate()),
   ]);
 };
 
@@ -1866,6 +2000,11 @@ export const generateRuntime = async (
   const mcp = planMcp(project, srcDir, pages);
   pages.push(...mcp.discoveryPages);
 
+  // The JSON docs API shares the MCP server's snapshot; build it once when
+  // either is on.
+  const api = planApi(project, srcDir, pages);
+  const agentData = await publishAgentData(project, { api, mcp }, modules);
+
   // The parsed OpenAPI specs behind the `blume:openapi` alias, also the source
   // of the proxy's origin allowlist below. The source parsed them during the
   // scan, so reading them here is free.
@@ -2027,7 +2166,8 @@ export const generateRuntime = async (
       )
     ),
     writeAskFiles(project, srcDir, write, modules),
-    writeMcpFiles(project, mcp, write, modules),
+    writeMcpFiles(mcp, write, agentData),
+    writeApiFiles(project, api, write, agentData, mcp),
     playgroundProxy.enabled
       ? write(playgroundProxy.entrypoint, playgroundProxyTemplate(proxyOrigins))
       : Promise.resolve(false),

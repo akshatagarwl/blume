@@ -788,6 +788,15 @@ export interface McpConfig {
  * hosted MCP server.
  */
 export interface AiConfig {
+  /**
+   * The JSON docs API — the REST twin of the MCP tools. Serves the page index
+   * (`/api/docs/pages.json`), each page as JSON (`/api/docs/pages/{route}.json`),
+   * and the navigation tree (`/api/docs/navigation.json`) as prerendered
+   * files, plus full-text search (`/api/docs/search?q=`) on server output,
+   * all described by an OpenAPI document at `/openapi.json`. Errors are RFC
+   * 9457 problem details. Defaults to `true`; set `false` to publish none of it.
+   */
+  api?: boolean;
   /** The Ask AI chat assistant. */
   ask?: AskConfig;
   /**

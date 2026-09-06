@@ -8,6 +8,7 @@ import { buildNetlifyHeaders } from "../src/deploy/headers.ts";
 // `base`/`basePath` stay unnormalized so the builder's own handling is tested.
 const configWith = (
   overrides: Partial<{
+    api: boolean;
     base?: string;
     basePath: string;
     mcp: boolean;
@@ -20,6 +21,7 @@ const configWith = (
     ...base,
     ai: {
       ...base.ai,
+      api: overrides.api ?? true,
       mcp: { ...base.ai.mcp, enabled: overrides.mcp ?? false },
       skills: overrides.skills,
       webBotAuth: { keys: overrides.webBotAuthKeys ?? [] },
@@ -31,7 +33,7 @@ const configWith = (
 
 describe("buildNetlifyHeaders", () => {
   it("pins a UTF-8 Content-Type onto each raw endpoint extension", () => {
-    expect(buildNetlifyHeaders(configWith({}))).toBe(
+    expect(buildNetlifyHeaders(configWith({ api: false }))).toBe(
       [
         "/*.md",
         "  Content-Type: text/markdown; charset=utf-8",
@@ -70,7 +72,7 @@ describe("buildNetlifyHeaders", () => {
 
   it("appends a homepage Link rule when a link header is provided", () => {
     const link = '</llms.txt>; rel="describedby"; type="text/plain"';
-    expect(buildNetlifyHeaders(configWith({}), link)).toEndWith(
+    expect(buildNetlifyHeaders(configWith({ api: false }), link)).toEndWith(
       `/\n  Link: ${link}\n`
     );
     // The homepage rule sits at the deployment base, not under basePath.
@@ -87,11 +89,17 @@ describe("buildNetlifyHeaders", () => {
   });
 
   it("pins the API catalog media type when the site publishes APIs", () => {
-    const out = buildNetlifyHeaders(configWith({ base: "/base", mcp: true }));
+    const out = buildNetlifyHeaders(
+      configWith({ api: false, base: "/base", mcp: true })
+    );
     expect(out).toContain(
       "/base/.well-known/api-catalog\n  Content-Type: application/linkset+json"
     );
-    expect(buildNetlifyHeaders(configWith({}))).not.toContain("api-catalog");
+    // The JSON docs API is on by default, and it is an API.
+    expect(buildNetlifyHeaders(configWith({}))).toContain("api-catalog");
+    expect(buildNetlifyHeaders(configWith({ api: false }))).not.toContain(
+      "api-catalog"
+    );
   });
 
   it("pins agent-skill media types when skills are configured", () => {

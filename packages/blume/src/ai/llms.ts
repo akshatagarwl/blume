@@ -7,6 +7,7 @@ import { readExpandedEntryText } from "../core/sources/read.ts";
 import type { NavNode, Navigation, PageRecord } from "../core/types.ts";
 import { buildRssFeeds } from "../deploy/rss.ts";
 import { API_CATALOG_PATH, hasApiCatalog } from "./api-catalog.ts";
+import { API_PAGES_PATH, OPENAPI_PATH } from "./api/paths.ts";
 import {
   downlevelComponents,
   exampleComponentSerializers,
@@ -41,8 +42,9 @@ const oneLine = (text: string): string => text.replaceAll(/\s+/gu, " ").trim();
 /**
  * The "Agent resources" section: every machine-readable artifact the site
  * publishes, so an agent that only reads llms.txt still finds the full
- * Markdown dump, the per-page Markdown mirrors, the MCP server, the skills
- * index, the API catalog, the readability manifest, and the sitemap. The
+ * Markdown dump, the per-page Markdown mirrors, the JSON docs API, the MCP
+ * server, the skills index, the API catalog, the readability manifest, and
+ * the sitemap. The
  * same artifact set `agent-readability.json` indexes, in prose an agent can
  * act on without a second fetch.
  */
@@ -55,6 +57,11 @@ const agentResourceLines = (project: BlumeProject): string[] => {
     `- [llms-full.txt](${url("/llms-full.txt")}): The full Markdown of every page in one file.`,
     `- [Page Markdown](${url("/index.md")}): Append \`.md\` to any page URL to fetch that page as raw Markdown.`,
   ];
+  if (config.ai.api) {
+    lines.push(
+      `- [JSON API](${url(API_PAGES_PATH)}): Page index of the JSON docs API; each entry links the page's JSON and Markdown forms. Described by the OpenAPI document at ${url(OPENAPI_PATH)}.`
+    );
+  }
   if (config.ai.mcp.enabled) {
     lines.push(
       `- [MCP server](${url(config.ai.mcp.route)}): Streamable HTTP Model Context Protocol server with search_docs, get_page, list_pages, and get_navigation tools, plus every page as a resource. Discovery document: ${url("/.well-known/mcp.json")}`

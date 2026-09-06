@@ -838,6 +838,13 @@ const llmsTxtObjectSchema = z.strictObject({
 type LlmsTxtResolved = z.output<typeof llmsTxtObjectSchema>;
 
 const aiConfigSchema = z.strictObject({
+  /**
+   * The JSON docs API: the page index, per-page JSON, and navigation under
+   * `/api/docs/` (prerendered, so a static site serves them from files), the
+   * live search endpoint on server output, and the OpenAPI description of
+   * the whole machine-readable surface at `/openapi.json`. On by default.
+   */
+  api: z.boolean().default(true),
   ask: z
     .strictObject({
       // Name of the env var holding the provider's API key; each provider has
