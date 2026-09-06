@@ -1676,6 +1676,26 @@ describe("generateRuntime", () => {
     expect(has("src/pages/api/docs/pages.json.ts")).toBe(true);
   });
 
+  it("keeps a docs section served under /api ahead of the JSON 404 catch-all", async () => {
+    const project = await scanProject(
+      await writeProject({
+        "blume.config.ts": `export default {
+  deployment: { adapter: "node", output: "server" },
+};
+`,
+        "docs/api/overview.md": "# API overview\n",
+        "docs/index.md": "# Home\n",
+      })
+    );
+    const out = project.context.outDir;
+    await generateRuntime(project);
+    const has = (rel: string): boolean => existsSync(join(out, rel));
+    // `/api/[...path]` would outrank the content catch-all for `/api/overview`.
+    expect(has("src/pages/api/[...path].ts")).toBe(false);
+    expect(has("src/pages/api/docs/search.ts")).toBe(true);
+    expect(has("src/pages/api/docs/pages.json.ts")).toBe(true);
+  });
+
   it("writes no docs API when ai.api is off, and no snapshot without MCP", async () => {
     const project = await scanProject(
       await writeProject({

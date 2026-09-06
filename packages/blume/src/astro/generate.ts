@@ -1567,8 +1567,9 @@ const writeMcpFiles = async (
 /** The resolved plan for the JSON docs API within a single generate pass. */
 interface ApiPlan {
   /**
-   * Whether the `/api/` catch-all (JSON 404s) is written: server output, and
-   * no user page already owns a rest route under `/api/`.
+   * Whether the `/api/` catch-all (JSON 404s) is written: server output, no
+   * user page owning a rest route under `/api/`, and no content page served
+   * from the `/api` namespace (the catch-all would outrank those pages).
    */
   catchAll: boolean;
   enabled: boolean;
@@ -1587,6 +1588,16 @@ const ownsApiRest = (page: { pattern: string }): boolean =>
   page.pattern.startsWith("/api/[");
 
 /**
+ * Whether a content route lives in the `/api` namespace — a docs section
+ * about an API commonly does (`content/api/overview.md` → `/api/overview`).
+ * Astro ranks `/api/[...path]` above the content catch-all (`/[...slug]`),
+ * so the JSON 404 route would shadow those pages wherever routing decides
+ * (the dev server, adapters that don't serve prerendered files first).
+ */
+const contentUnderApi = (page: { route: string }): boolean =>
+  page.route === "/api" || page.route.startsWith("/api/");
+
+/**
  * Decide what the JSON docs API generates. The prerendered endpoints always
  * ride along when the feature is on (they live under Blume's own `/api/docs/`
  * namespace); the live ones need server output; the OpenAPI description yields
@@ -1600,7 +1611,10 @@ const planApi = (
   const { config, context } = project;
   const server = config.deployment.output === "server";
   return {
-    catchAll: server && !userPages.some(ownsApiRest),
+    catchAll:
+      server &&
+      !userPages.some(ownsApiRest) &&
+      !project.graph.pages.some(contentUnderApi),
     enabled: config.ai.api,
     server,
     spec:

@@ -402,7 +402,7 @@ The page index, per-page documents, and navigation are prerendered, so a static 
 
 The **OpenAPI document** at `/openapi.json` is generated per build from your config, so it describes only what the deployed site serves: every JSON endpoint with a unique `operationId`, typed parameters, and response schemas, plus the text surfaces alongside — the [`.md` mirrors](#raw-markdown), [`llms.txt`](#llmstxt) and `llms-full.txt`, [`agent-readability.json`](#agent-readability) — and the [MCP endpoint](#mcp-server) when it's enabled. Frameworks that build tools from an OpenAPI description get the same reach an MCP client has. The document is linked from the [API catalog](#api-catalog), the [readability manifest](#agent-readability), the homepage `Link` header as `rel="service-desc"`, and `llms.txt`.
 
-Set `ai.api` to `false` to publish none of it. A `public/openapi.json` you ship yourself takes over that route (the JSON endpoints stay), and a custom page owning a rest route under `/api/` keeps its own not-found handling:
+None of this touches your own [API reference](/docs/advanced/api-reference): a documented spec is rendered into pages, never served at `/openapi.json`, and the catalog lists both. A `public/openapi.json` you ship yourself takes over that route (the JSON endpoints stay). The `/api/…` catch-all steps aside when a docs section is served from the `/api` namespace (`content/api/overview.md`) or a custom page owns a rest route under `/api/`, so those pages keep winning. Set `ai.api` to `false` to publish none of it:
 
 ```ts blume.config.ts lineNumbers
 ai: {
