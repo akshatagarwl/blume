@@ -798,8 +798,54 @@ const bannerKey = banner?.dismissible ? banner.key : null;
       // Opaque icon chip over the code (in the style of Lina's code block),
       // with the check icon scale-swapping in over the copy icon after a copy.
       const buttonClass =
-        "absolute right-3 z-[2] inline-flex size-[1.875rem] select-none items-center justify-center rounded-md text-muted-foreground bg-background transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0";
+        "inline-flex size-[1.875rem] select-none items-center justify-center rounded-md text-muted-foreground bg-background transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0";
+      // Pinned over the block's top-right corner when the button lives in
+      // the pre; a strip-hosted button (see codeGroupActions) is in flow.
+      const overlayClass = "absolute right-3 z-[2]";
       const idleClasses = ["hover:bg-muted", "hover:text-foreground"];
+
+      // A tab panel that is nothing but code: a CodeGroup/ts2js block (the
+      // pre is the panel) or a <Tab> holding only fences and the icon
+      // template — the same predicate Tab.astro's flush-padding selector uses.
+      const isCodePanel = (panel: Element) =>
+        panel.matches("pre, figure") ||
+        (panel.matches("[data-blume-tab-panel]") &&
+          panel.querySelector(":scope > pre") !== null &&
+          Array.from(panel.children).every((child) =>
+            child.matches("pre, template")
+          ));
+
+      // The tab group's actions slot, when the group is a code switcher —
+      // every panel a bare block — so one copy button in the strip serves
+      // whichever panel is showing. A group with prose panels (or none) gets
+      // null and keeps a button in each pre.
+      const codeGroupActions = (pre: Element) => {
+        const tabs = pre.closest("blume-tabs");
+        const content = tabs?.querySelector(":scope > [data-blume-tab-content]");
+        const panels = content ? Array.from(content.children) : [];
+        if (!tabs || panels.length === 0 || !panels.every(isCodePanel)) {
+          return null;
+        }
+        return tabs.querySelector<HTMLElement>(
+          ":scope > * > [data-blume-tab-actions]"
+        );
+      };
+
+      // The block the strip's copy button should read: the visible panel's
+      // pre. Panels toggle a `hidden` class once the tabs element upgrades;
+      // before that only the first is painted, and it is also the first
+      // match here.
+      const activeCodePre = (tabs: Element) => {
+        const content = tabs.querySelector(":scope > [data-blume-tab-content]");
+        const panel =
+          Array.from(content?.children ?? []).find(
+            (child) => !child.classList.contains("hidden")
+          ) ?? content?.firstElementChild;
+        if (!panel) {
+          return null;
+        }
+        return panel.matches("pre") ? panel : panel.querySelector("pre");
+      };
 
       const languageLabels: Record<string, string> = {
         astro: "Astro",
@@ -836,6 +882,62 @@ const bannerKey = banner?.dismissible ? banner.key : null;
         const copiedLabel =
           document.body.getAttribute("data-i18n-copied") || "Copied!";
 
+        // `placement` is the extra class set for an overlay button (empty for
+        // one hosted by a tab strip); `readPre` resolves the block to copy at
+        // click time, since a strip button follows the active panel.
+        const createCopyButton = (
+          placement: string,
+          readPre: () => Element | null
+        ) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `${buttonClass} ${idleClasses.join(" ")} ${placement}`;
+          button.setAttribute("data-blume-copy", "");
+          button.setAttribute("aria-label", copyCodeLabel);
+          button.innerHTML =
+            svg(
+              "check",
+              "scale-0 text-green-600 transition-transform dark:text-green-500"
+            ) + svg("copy", "absolute transition-transform");
+          const [checkIcon, copyIcon] = button.querySelectorAll("svg");
+          // While checked the button drops its idle hover tint so the green
+          // check reads as a steady confirmation, mirroring Lina's copied state.
+          // The accessible name tracks the visual state for anyone probing the
+          // button mid-confirmation.
+          const setChecked = (checked: boolean) => {
+            checkIcon?.classList.toggle("scale-0", !checked);
+            copyIcon?.classList.toggle("scale-0", checked);
+            button.setAttribute(
+              "aria-label",
+              checked ? copiedLabel : copyCodeLabel
+            );
+            for (const cls of idleClasses) {
+              button.classList.toggle(cls, !checked);
+            }
+          };
+          const flash = createCopyFlash(setChecked, copiedLabel);
+          button.addEventListener("click", async () => {
+            const code = readPre()?.querySelector("code");
+            let text = code?.textContent ?? "";
+            // Twoslash nests each hover popup's type signature and docs inside
+            // the <code>; copying textContent verbatim would interleave them
+            // with the source. Strip the popups from a clone first.
+            if (code?.querySelector(".twoslash-popup-container")) {
+              const clone = code.cloneNode(true) as HTMLElement;
+              for (const popup of clone.querySelectorAll(
+                ".twoslash-popup-container"
+              )) {
+                popup.remove();
+              }
+              text = clone.textContent ?? "";
+            }
+            if (await copyText(text)) {
+              flash();
+            }
+          });
+          return button;
+        };
+
         for (const pre of document.querySelectorAll(".prose pre")) {
           if (pre.querySelector("[data-blume-copy]")) {
             continue;
@@ -863,58 +965,25 @@ const bannerKey = banner?.dismissible ? banner.key : null;
             scroller.setAttribute("tabindex", "0");
             pre.removeAttribute("tabindex");
           }
-          const button = document.createElement("button");
-          button.type = "button";
+          const actions = codeGroupActions(pre);
+          if (actions) {
+            // One button per code switcher, reading whichever panel shows.
+            if (!actions.querySelector("[data-blume-copy]")) {
+              const tabs = actions.closest("blume-tabs");
+              actions.appendChild(
+                createCopyButton("", () => (tabs ? activeCodePre(tabs) : null))
+              );
+            }
+            continue;
+          }
           // The language-label bar (prose) vs flush code (tabs) need a different
           // offset; pick the Tailwind class by context instead of a CSS override.
           const topClass = pre.closest("blume-tabs, .not-prose")
             ? "top-2.5"
             : "top-2";
-          button.className = `${buttonClass} ${idleClasses.join(" ")} ${topClass}`;
-          button.setAttribute("data-blume-copy", "");
-          button.setAttribute("aria-label", copyCodeLabel);
-          button.innerHTML =
-            svg(
-              "check",
-              "scale-0 text-green-600 transition-transform dark:text-green-500"
-            ) + svg("copy", "absolute transition-transform");
-          const [checkIcon, copyIcon] = button.querySelectorAll("svg");
-          // While checked the button drops its idle hover tint so the green
-          // check reads as a steady confirmation, mirroring Lina's copied state.
-          // The accessible name tracks the visual state for anyone probing the
-          // button mid-confirmation.
-          const setChecked = (checked: boolean) => {
-            checkIcon?.classList.toggle("scale-0", !checked);
-            copyIcon?.classList.toggle("scale-0", checked);
-            button.setAttribute(
-              "aria-label",
-              checked ? copiedLabel : copyCodeLabel
-            );
-            for (const cls of idleClasses) {
-              button.classList.toggle(cls, !checked);
-            }
-          };
-          const flash = createCopyFlash(setChecked, copiedLabel);
-          button.addEventListener("click", async () => {
-            const code = pre.querySelector("code");
-            let text = code?.textContent ?? "";
-            // Twoslash nests each hover popup's type signature and docs inside
-            // the <code>; copying textContent verbatim would interleave them
-            // with the source. Strip the popups from a clone first.
-            if (code?.querySelector(".twoslash-popup-container")) {
-              const clone = code.cloneNode(true) as HTMLElement;
-              for (const popup of clone.querySelectorAll(
-                ".twoslash-popup-container"
-              )) {
-                popup.remove();
-              }
-              text = clone.textContent ?? "";
-            }
-            if (await copyText(text)) {
-              flash();
-            }
-          });
-          pre.appendChild(button);
+          pre.appendChild(
+            createCopyButton(`${overlayClass} ${topClass}`, () => pre)
+          );
         }
 
         // Click-to-zoom for content images (gated by `markdown.imageZoom`),

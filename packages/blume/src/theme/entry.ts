@@ -1,7 +1,4 @@
-import {
-  CODE_PADDING_BLOCK_REM,
-  FLUSH_CODE_PADDING_TOP_REM,
-} from "./code-block-padding.ts";
+import { CODE_PADDING_BLOCK_REM } from "./code-block-padding.ts";
 
 interface TailwindEntryOptions {
   /**
@@ -614,27 +611,19 @@ blume-tabs pre[data-language],
   padding-top: ${CODE_PADDING_BLOCK_REM}rem;
 }
 
-/* Room for the copy button. The docs layout injects it into every \`.prose pre\`
-   — absolutely positioned against the pre's border box, 1.875rem tall, at
-   \`top-2.5\` in the flush contexts above and \`top-2\` elsewhere — and it is
-   unconditional, so wherever no language bar exists to hold it, it painted
-   over the first line of code: any line long enough to reach the button's
-   strip (a curl invocation, an install command, an import path) went under
-   it. Keyed on the attribute the docs layout stamps on <body>, so the strip
-   only appears where the injector runs (PageLayout pages run none), and on
-   \`.astro-code\` so the playground's response pre — created after the
-   injector ran, never given a button — keeps its plain inset. The first
-   selector is the injector's own flush predicate; the second covers the
-   remaining bar-less Shiki case, an untitled <CodeBlock> in plain prose, from
-   first paint. The third covers a raw \`<pre><code>\` written in prose — no
-   \`.astro-code\`, no language bar, but the injector gives it a button all
-   the same — keyed on that injected button, which is exactly what separates
-   it from the playground's pre. API panel blocks match, but their own
-   !important padding wins and they hide the injected button. */
-[data-blume-code-copy] :is(blume-tabs, .not-prose) pre.astro-code,
-[data-blume-code-copy] .prose pre.astro-code:not([data-language]),
-[data-blume-code-copy] .prose pre:not([data-language]):has(> [data-blume-copy]) {
-  padding-top: ${FLUSH_CODE_PADDING_TOP_REM}rem;
+/* Where no language bar holds the copy button — a flush block in tabs or a
+   not-prose component, a bar-less block in prose — the docs layout still pins
+   one over the block's top-right corner, so a first line long enough to reach
+   it would end underneath. A code switcher (CodeGroup, ts2js) hosts the button
+   in its tab strip instead and needs nothing here; for every block that keeps
+   an overlay button, give the scrolling code element enough end padding that
+   the line's tail clears the button at the end of its scroll. Keyed on the
+   injected button itself (which the playground's client-created response pre
+   never gets), and \`.prose\`-scoped to outrank the base \`:where(pre code)\`
+   inset. Not a vertical inset — that reserved a strip above every one-line
+   command and read as a rendering bug. */
+.prose :is(blume-tabs pre, .not-prose pre, pre:not([data-language])):not(.twoslash, .twoslash pre, blume-panel-tabs *):has(> [data-blume-copy]) > code {
+  padding-inline-end: 3.5rem;
 }
 
 blume-tabs pre[data-language]::before,

@@ -62,19 +62,34 @@ const useDropdown = dropdown && !inline;
   data-sync={sync ? "true" : "false"}
   data-sync-key={syncKey}
 >
-  <div
-    class:list={[
-      inline ? "not-prose" : "",
-      useDropdown ? "" : "overflow-x-auto",
-    ]}
-  >
+  {/*
+    Header row: the scrolling tab strip (or the dropdown) grows, and an
+    actions slot sits fixed at the inline end, outside the scroller so it
+    never rides along with an overflowing strip. The docs layout fills it
+    with one copy button when every panel is a bare code block (CodeGroup,
+    ts2js pairs) — the strip is that group's chrome, so the button belongs
+    there rather than painted over the first line of each block. Empty
+    otherwise, and hidden so it adds no padding.
+  */}
+  <div class:list={["flex", inline ? "not-prose" : ""]}>
+    <div class:list={["min-w-0 grow", useDropdown ? "" : "overflow-x-auto"]}>
+      <div
+        class:list={[
+          useDropdown || borderBottom ? "border-border border-b" : "",
+          useDropdown ? "p-3" : inline ? "flex gap-4" : "flex gap-4 px-3",
+        ]}
+        data-blume-tablist
+        role={useDropdown ? undefined : "tablist"}
+      >
+      </div>
+    </div>
     <div
       class:list={[
+        "flex shrink-0 items-center gap-2 ps-2 empty:hidden",
+        inline ? "" : "pe-3",
         useDropdown || borderBottom ? "border-border border-b" : "",
-        useDropdown ? "p-3" : inline ? "flex gap-4" : "flex gap-4 px-3",
       ]}
-      data-blume-tablist
-      role={useDropdown ? undefined : "tablist"}
+      data-blume-tab-actions
     >
     </div>
   </div>
