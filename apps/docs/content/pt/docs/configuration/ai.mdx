@@ -1,10 +1,10 @@
 ---
 title: IA
 description: >-
-  Torne sua documentação legível por máquinas com llms.txt, adicione um assistente Ask AI opcional na página e exponha um servidor MCP hospedado para agentes de programação.
+  Torne sua documentação legível por máquinas com llms.txt e uma API JSON descrita por OpenAPI, adicione um assistente Ask AI opcional na página e exponha um servidor MCP hospedado para agentes de programação.
 ---
 
-O Blume tem alguns recursos de IA: documentação legível por máquinas para ferramentas externas (`llms.txt`, ativado por padrão), um assistente **Ask AI** na página e um **servidor MCP** hospedado para agentes de programação. O Ask AI e o MCP são opcionais, e a documentação estática continua totalmente estática até você ativar um recurso.
+O Blume tem alguns recursos de IA: documentação legível por máquinas para ferramentas externas (`llms.txt` e uma [API JSON](#json-api) com uma descrição OpenAPI, ambos ativados por padrão), um assistente **Ask AI** na página e um **servidor MCP** hospedado para agentes de programação. O Ask AI e o MCP são opcionais, e a documentação estática continua totalmente estática até você ativar um recurso.
 
 ## llms.txt
 
@@ -365,6 +365,52 @@ Um build estático com `ai.mcp.enabled` falha logo de cara, com uma mensagem diz
 claude mcp add --transport http my-docs https://docs.example.com/mcp
 ```
 
+## API JSON
+
+Todo site Blume também serve sua documentação como uma pequena **API JSON** somente leitura — a irmã REST das ferramentas do [servidor MCP](#mcp-server), sobre o mesmo snapshot de páginas, para agentes e frameworks de function calling que falam HTTP simples em vez de MCP. Vem ativada por padrão e não precisa de configuração:
+
+| Endpoint | Retorna |
+| --- | --- |
+| `/api/docs/pages.json` | Todas as páginas com sua rota, título, descrição, tipo de conteúdo, idioma, facetas e as URLs das suas formas renderizada, Markdown e JSON. |
+| `/api/docs/pages/{route}.json` | Uma página: sua entrada de índice mais o Markdown voltado a agentes (o mesmo corpo que `get_page` retorna). `{route}` é a rota da página sem a barra inicial, `index` para a inicial. |
+| `/api/docs/navigation.json` | A árvore de navegação — abas do cabeçalho e a hierarquia da barra lateral. |
+| `/api/docs/search?q=` | Busca de texto completo, com a mesma restrição por `limit`, `contentTypes`, `locale`, `version` e `filters[key]` do `search_docs`. Só com saída de servidor. |
+| `/openapi.json` | A descrição OpenAPI 3.1 de toda a superfície legível por máquinas. |
+
+O índice de páginas, os documentos por página e a navegação são pré-renderizados, então um site estático os serve como arquivos a partir de qualquer host. A busca é um endpoint ativo e existe apenas com [saída de servidor](/docs/deployment#server-rendering), onde ela roda o mesmo índice que o `search_docs`. Os erros são problem details da [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`application/problem+json`) com um `code` estável, um `detail` e uma dica de `resolution` dizendo ao agente para onde ir em seguida — uma página inexistente, uma consulta de busca vazia ou, com saída de servidor, qualquer URL `/api/…` que nenhum endpoint responda:
+
+```json
+{
+  "code": "API_ROUTE_NOT_FOUND",
+  "detail": "No API route exists at /api/nope.",
+  "instance": "/api/nope",
+  "links": [
+    {
+      "href": "https://docs.example.com/openapi.json",
+      "label": "OpenAPI description"
+    },
+    {
+      "href": "https://docs.example.com/api/docs/pages.json",
+      "label": "Page index"
+    }
+  ],
+  "resolution": "Discover the available operations through the OpenAPI description at https://docs.example.com/openapi.json, or list every page at https://docs.example.com/api/docs/pages.json.",
+  "status": 404,
+  "title": "API route not found",
+  "type": "about:blank"
+}
+```
+
+O **documento OpenAPI** em `/openapi.json` é gerado a cada build a partir da sua configuração, então descreve só o que o site publicado serve: cada endpoint JSON com um `operationId` único, parâmetros tipados e esquemas de resposta, mais as superfícies de texto ao lado — os [espelhos `.md`](#raw-markdown), o [`llms.txt`](#llmstxt) e o `llms-full.txt`, o [`agent-readability.json`](#agent-readability) — e o [endpoint MCP](#mcp-server) quando ele está ativado. Frameworks que constroem ferramentas a partir de uma descrição OpenAPI ganham o mesmo alcance que um cliente MCP tem. O documento é referenciado pelo [catálogo de API](#api-catalog), pelo [manifesto de legibilidade](#agent-readability), pelo cabeçalho `Link` da página inicial como `rel="service-desc"` e pelo `llms.txt`.
+
+Nada disso mexe na sua própria [referência de API](/docs/advanced/api-reference): uma especificação documentada é renderizada em páginas, nunca servida em `/openapi.json`, e o catálogo lista as duas. Um `public/openapi.json` publicado por você assume essa rota (os endpoints JSON continuam). O catch-all de `/api/…` sai do caminho quando uma seção da documentação é servida a partir do namespace `/api` (`content/api/overview.md`) ou quando uma página personalizada é dona de uma rota rest sob `/api/`, então essas páginas continuam vencendo. Defina `ai.api` como `false` para não publicar nada disso:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  api: false,
+}
+```
+
 ## Legibilidade para agentes
 
 O Blume escreve um manifesto **`/agent-readability.json`** na raiz do seu site que indexa a superfície voltada a agentes descrita nesta página — para que um agente possa descobri-la em uma única requisição, em vez de adivinhar convenções ou raspar o HTML. Assim como o `llms.txt`, vem ativado por padrão:
@@ -375,7 +421,7 @@ seo: {
 }
 ```
 
-O manifesto lista só o que você ativou — o padrão de espelho de [Markdown bruto](#raw-markdown), o [`llms.txt`](#llmstxt) e o `llms-full.txt`, o [servidor MCP](#mcp-server) e seu documento de descoberta, o endpoint do [Ask AI](#ask-ai), o [sitemap](/docs/configuration/seo#sitemap) e os [feeds RSS](/docs/configuration/seo#rss-feeds) — junto com o nome do seu site, a descrição, o repositório de origem e a política de uso de [content-signal](/docs/configuration/seo#content-signals). As URLs são absolutas quando [`deployment.site`](/docs/deployment) está definido e relativas à raiz caso contrário:
+O manifesto lista só o que você ativou — o padrão de espelho de [Markdown bruto](#raw-markdown), a [API JSON](#json-api) e sua descrição OpenAPI, o [`llms.txt`](#llmstxt) e o `llms-full.txt`, o [servidor MCP](#mcp-server) e seu documento de descoberta, o endpoint do [Ask AI](#ask-ai), o [sitemap](/docs/configuration/seo#sitemap) e os [feeds RSS](/docs/configuration/seo#rss-feeds) — junto com o nome do seu site, a descrição, o repositório de origem e a política de uso de [content-signal](/docs/configuration/seo#content-signals). As URLs são absolutas quando [`deployment.site`](/docs/deployment) está definido e relativas à raiz caso contrário:
 
 ```json agent-readability.json
 {
@@ -383,6 +429,11 @@ O manifesto lista só o que você ativou — o padrão de espelho de [Markdown b
     "markdown": {
       "contentNegotiation": "text/markdown",
       "pattern": "https://docs.example.com/{route}.md"
+    },
+    "api": {
+      "openapi": "https://docs.example.com/openapi.json",
+      "pages": "https://docs.example.com/api/docs/pages.json",
+      "search": "https://docs.example.com/api/docs/search"
     },
     "llmsFullTxt": "https://docs.example.com/llms-full.txt",
     "llmsTxt": "https://docs.example.com/llms.txt",
@@ -409,12 +460,14 @@ Defina `seo.agentReadability` como `false` para pulá-lo, ou publique seu própr
 Agentes que sondam um site não sabem que devem procurar o manifesto — por isso o Blume também o anuncia em um cabeçalho de resposta `Link` conforme a [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) na página inicial, usando tipos de relação registrados na IANA:
 
 ```http
-Link: </agent-readability.json>; rel="describedby"; type="application/json",
+Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json",
+  </openapi.json>; rel="service-desc"; type="application/json",
+  </agent-readability.json>; rel="describedby"; type="application/json",
   </llms.txt>; rel="describedby"; type="text/plain",
   </index.md>; rel="alternate"; type="text/markdown"
 ```
 
-Cada entrada aparece só quando o respectivo recurso está ativo. O link `alternate` aponta para o espelho Markdown da página inicial — o [Markdown bruto](#raw-markdown) da própria página quando a rota inicial é uma página de conteúdo, ou o fallback do `llms.txt` sintetizado quando é uma landing page. Sites que também publicam APIs ganham uma entrada `rel="api-catalog"` apontando para o [catálogo de API gerado](#api-catalog). O cabeçalho vai em todas as superfícies que o Blume controla: o servidor de desenvolvimento (confira com `curl -I localhost:4321`), os builds estáticos via arquivo `_headers` emitido (Netlify e Cloudflare) e os builds de servidor na Vercel via regras de roteamento do deploy.
+Cada entrada aparece só quando o respectivo recurso está ativo. O link `alternate` aponta para o espelho Markdown da página inicial — o [Markdown bruto](#raw-markdown) da própria página quando a rota inicial é uma página de conteúdo, ou o fallback do `llms.txt` sintetizado quando é uma landing page. O link `service-desc` ([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)) aponta para a descrição OpenAPI da [API JSON](#json-api), e o `api-catalog` para o [catálogo de API gerado](#api-catalog). O cabeçalho vai em todas as superfícies que o Blume controla: o servidor de desenvolvimento (confira com `curl -I localhost:4321`), os builds estáticos via arquivo `_headers` emitido (Netlify e Cloudflare) e os builds de servidor na Vercel via regras de roteamento do deploy.
 
 Mas nem todo agente entra pela raiz — um que segue um resultado de busca ou um link compartilhado cai em uma página profunda e nunca vê o cabeçalho da página inicial. Por isso toda página renderizada também carrega os mesmos links de descoberta no `<head>` do seu HTML, usando as mesmas relações registradas na IANA:
 
@@ -432,7 +485,7 @@ Aqui o link `alternate` aponta para o [espelho Markdown bruto](#raw-markdown) _d
 
 ### Catálogo de API
 
-Quando o site publica APIs, o Blume gera um catálogo de API conforme a [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) em `/.well-known/api-catalog` — um [linkset](https://www.rfc-editor.org/rfc/rfc9264) que permite aos agentes enumerar suas APIs só a partir do domínio, servido com seu media type registrado `application/linkset+json` em todas as superfícies de build. Não há nada para configurar: o catálogo é derivado do que já está no `blume.config.ts`. Cada [referência OpenAPI ou AsyncAPI](/docs/advanced/api-reference) vira uma entrada ancorada na sua rota de documentação renderizada, com `service-doc` apontando para essa documentação e `service-desc` para a especificação quando ela mora em uma URL acessível; o [servidor MCP](#mcp-server) vira uma entrada com seu documento de descoberta como descrição do serviço:
+Quando o site publica APIs, o Blume gera um catálogo de API conforme a [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) em `/.well-known/api-catalog` — um [linkset](https://www.rfc-editor.org/rfc/rfc9264) que permite aos agentes enumerar suas APIs só a partir do domínio, servido com seu media type registrado `application/linkset+json` em todas as superfícies de build. Não há nada para configurar: o catálogo é derivado do que já está no `blume.config.ts`. Cada [referência OpenAPI ou AsyncAPI](/docs/advanced/api-reference) vira uma entrada ancorada na sua rota de documentação renderizada, com `service-doc` apontando para essa documentação e `service-desc` para a especificação quando ela mora em uma URL acessível; a própria [API JSON](#json-api) do site vira uma entrada descrita pelo seu `/openapi.json`; e o [servidor MCP](#mcp-server) vira uma entrada com seu documento de descoberta como descrição do serviço:
 
 ```json .well-known/api-catalog
 {
@@ -443,6 +496,18 @@ Quando o site publica APIs, o Blume gera um catálogo de API conforme a [RFC 972
         { "href": "https://docs.example.com/reference", "type": "text/html" }
       ],
       "service-desc": [{ "href": "https://api.example.com/openapi.json" }]
+    },
+    {
+      "anchor": "https://docs.example.com/api/docs",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
     },
     {
       "anchor": "https://docs.example.com/mcp",
@@ -460,7 +525,7 @@ Quando o site publica APIs, o Blume gera um catálogo de API conforme a [RFC 972
 }
 ```
 
-Um site sem referências de API e sem servidor MCP não emite catálogo nenhum — não haveria nada nele. Como em todo lugar, um arquivo `public/.well-known/api-catalog` publicado por você vence o gerado.
+Um site sem referências de API, sem servidor MCP e com a [API JSON](#json-api) desativada não emite catálogo nenhum — não haveria nada nele. Como em todo lugar, um arquivo `public/.well-known/api-catalog` publicado por você vence o gerado.
 
 ### WebMCP
 

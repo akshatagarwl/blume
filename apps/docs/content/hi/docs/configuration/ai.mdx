@@ -1,10 +1,10 @@
 ---
 title: AI
 description: >-
-  llms.txt के साथ अपने डॉक्स को मशीन-पठनीय बनाएँ, एक वैकल्पिक इन-पेज Ask AI सहायक जोड़ें, और कोडिंग एजेंट्स के लिए एक होस्टेड MCP सर्वर उपलब्ध कराएँ।
+  llms.txt और OpenAPI द्वारा वर्णित एक JSON API के साथ अपने डॉक्स को मशीन-पठनीय बनाएँ, एक वैकल्पिक इन-पेज Ask AI सहायक जोड़ें, और कोडिंग एजेंट्स के लिए एक होस्टेड MCP सर्वर उपलब्ध कराएँ।
 ---
 
-Blume में कुछ AI सुविधाएँ हैं: बाहरी टूल्स के लिए मशीन-पठनीय डॉक्स (`llms.txt`, डिफ़ॉल्ट रूप से चालू), एक इन-पेज **Ask AI** सहायक, और कोडिंग एजेंट्स के लिए एक होस्टेड **MCP सर्वर**। Ask AI और MCP ऑप्ट-इन हैं, और जब तक आप कोई सुविधा चालू नहीं करते, स्टैटिक डॉक्स पूरी तरह स्टैटिक बने रहते हैं।
+Blume में कुछ AI सुविधाएँ हैं: बाहरी टूल्स के लिए मशीन-पठनीय डॉक्स (`llms.txt` और एक OpenAPI विवरण के साथ एक [JSON API](#json-api), दोनों डिफ़ॉल्ट रूप से चालू), एक इन-पेज **Ask AI** सहायक, और कोडिंग एजेंट्स के लिए एक होस्टेड **MCP सर्वर**। Ask AI और MCP ऑप्ट-इन हैं, और जब तक आप कोई सुविधा चालू नहीं करते, स्टैटिक डॉक्स पूरी तरह स्टैटिक बने रहते हैं।
 
 ## llms.txt
 
@@ -365,6 +365,52 @@ deployment: {
 claude mcp add --transport http my-docs https://docs.example.com/mcp
 ```
 
+## JSON API
+
+हर Blume साइट अपने डॉक्स को एक छोटे केवल-पढ़ने योग्य **JSON API** के रूप में भी सर्व करती है — [MCP सर्वर](#mcp-server) के टूल्स का REST जुड़वाँ, उसी पेज स्नैपशॉट के ऊपर, उन एजेंट्स और फ़ंक्शन-कॉलिंग फ़्रेमवर्क्स के लिए जो MCP के बजाय सादा HTTP बोलते हैं। यह डिफ़ॉल्ट रूप से चालू है और इसे किसी कॉन्फ़िगरेशन की ज़रूरत नहीं:
+
+| एंडपॉइंट | क्या लौटाता है |
+| --- | --- |
+| `/api/docs/pages.json` | हर पेज, उसके रूट, शीर्षक, विवरण, कंटेंट प्रकार, लोकेल, फ़ेसेट्स, और उसके रेंडर किए गए, Markdown तथा JSON रूपों के URLs के साथ। |
+| `/api/docs/pages/{route}.json` | एक पेज: उसकी इंडेक्स प्रविष्टि और साथ में एजेंट Markdown (वही बॉडी जो `get_page` लौटाता है)। `{route}` अग्रगामी स्लैश के बिना पेज रूट है, होम के लिए `index`। |
+| `/api/docs/navigation.json` | नेविगेशन ट्री — हेडर टैब्स और साइडबार पदानुक्रम। |
+| `/api/docs/search?q=` | पूर्ण-पाठ खोज, वही `limit`, `contentTypes`, `locale`, `version`, और `filters[key]` स्कोपिंग के साथ जो `search_docs` में है। केवल सर्वर आउटपुट। |
+| `/openapi.json` | पूरी मशीन-पठनीय सतह का OpenAPI 3.1 विवरण। |
+
+पेज इंडेक्स, प्रति-पेज दस्तावेज़, और नेविगेशन पूर्व-रेंडर किए जाते हैं, इसलिए एक स्टैटिक साइट उन्हें किसी भी होस्ट से फ़ाइलों के रूप में सर्व करती है। खोज एक लाइव एंडपॉइंट है और केवल [सर्वर आउटपुट](/docs/deployment#server-rendering) के अंतर्गत मौजूद रहती है, जहाँ यह वही इंडेक्स चलाती है जो `search_docs` चलाता है। त्रुटियाँ [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) प्रॉब्लम डिटेल्स (`application/problem+json`) होती हैं, जिनमें एक स्थिर `code`, एक `detail`, और एक `resolution` संकेत होता है जो एजेंट को बताता है कि आगे कहाँ जाना है — कोई अनुपस्थित पेज, कोई खाली खोज क्वेरी, या सर्वर आउटपुट पर कोई भी ऐसा `/api/…` URL जिसका उत्तर कोई एंडपॉइंट न देता हो:
+
+```json
+{
+  "code": "API_ROUTE_NOT_FOUND",
+  "detail": "No API route exists at /api/nope.",
+  "instance": "/api/nope",
+  "links": [
+    {
+      "href": "https://docs.example.com/openapi.json",
+      "label": "OpenAPI description"
+    },
+    {
+      "href": "https://docs.example.com/api/docs/pages.json",
+      "label": "Page index"
+    }
+  ],
+  "resolution": "Discover the available operations through the OpenAPI description at https://docs.example.com/openapi.json, or list every page at https://docs.example.com/api/docs/pages.json.",
+  "status": 404,
+  "title": "API route not found",
+  "type": "about:blank"
+}
+```
+
+`/openapi.json` पर मौजूद **OpenAPI दस्तावेज़** आपके कॉन्फ़िग से प्रति बिल्ड जनरेट होता है, इसलिए यह केवल उसी का वर्णन करता है जो डिप्लॉय की गई साइट सर्व करती है: हर JSON एंडपॉइंट एक अद्वितीय `operationId`, टाइप किए गए पैरामीटर्स, और प्रतिक्रिया स्कीमा के साथ, साथ ही उसके बगल की टेक्स्ट सतहें — [`.md` प्रतिबिंब](#raw-markdown), [`llms.txt`](#llmstxt) और `llms-full.txt`, [`agent-readability.json`](#agent-readability) — और [MCP एंडपॉइंट](#mcp-server) जब वह सक्षम हो। जो फ़्रेमवर्क किसी OpenAPI विवरण से टूल्स बनाते हैं, उन्हें वही पहुँच मिलती है जो एक MCP क्लाइंट के पास होती है। यह दस्तावेज़ [API कैटलॉग](#api-catalog), [रीडेबिलिटी मैनिफ़ेस्ट](#agent-readability), होमपेज के `Link` हेडर में `rel="service-desc"` के रूप में, और `llms.txt` से लिंक किया जाता है।
+
+इसमें से कुछ भी आपके अपने [API संदर्भ](/docs/advanced/api-reference) को नहीं छूता: कोई दस्तावेज़ीकृत स्पेक पेजों में रेंडर किया जाता है, कभी `/openapi.json` पर सर्व नहीं होता, और कैटलॉग दोनों को सूचीबद्ध करता है। आपके द्वारा स्वयं भेजी गई `public/openapi.json` उस रूट को अपने अधिकार में ले लेती है (JSON एंडपॉइंट बने रहते हैं)। `/api/…` कैच-ऑल तब पीछे हट जाता है जब कोई डॉक्स अनुभाग `/api` नेमस्पेस से सर्व होता है (`content/api/overview.md`) या कोई कस्टम पेज `/api/` के अंतर्गत किसी शेष रूट का स्वामी हो, ताकि वे पेज जीतते रहें। इसमें से कुछ भी प्रकाशित न करने के लिए `ai.api` को `false` सेट करें:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  api: false,
+}
+```
+
 ## एजेंट रीडेबिलिटी
 
 Blume आपकी साइट के रूट पर एक **`/agent-readability.json`** मैनिफ़ेस्ट लिखता है जो इस पेज पर वर्णित एजेंट-सामने वाली सतह को इंडेक्स करता है — ताकि एक एजेंट परंपराओं का अनुमान लगाने या HTML स्क्रैप करने के बजाय इसे एक ही फ़ेच में खोज सके। `llms.txt` की तरह, यह डिफ़ॉल्ट रूप से चालू है:
@@ -375,7 +421,7 @@ seo: {
 }
 ```
 
-मैनिफ़ेस्ट केवल वही सूचीबद्ध करता है जो आपने सक्षम किया है — [कच्चा Markdown](#raw-markdown) प्रतिबिंब पैटर्न, [`llms.txt`](#llmstxt) और `llms-full.txt`, [MCP सर्वर](#mcp-server) और उसका डिस्कवरी दस्तावेज़, [Ask AI](#ask-ai) एंडपॉइंट, [साइटमैप](/docs/configuration/seo#sitemap), और [RSS फ़ीड्स](/docs/configuration/seo#rss-feeds) — साथ ही आपकी साइट का नाम, विवरण, स्रोत रिपॉज़िटरी, और [content-signal](/docs/configuration/seo#content-signals) उपयोग नीति। [`deployment.site`](/docs/deployment) सेट होने पर URL निरपेक्ष होते हैं और अन्यथा रूट-सापेक्ष:
+मैनिफ़ेस्ट केवल वही सूचीबद्ध करता है जो आपने सक्षम किया है — [कच्चा Markdown](#raw-markdown) प्रतिबिंब पैटर्न, [JSON API](#json-api) और उसका OpenAPI विवरण, [`llms.txt`](#llmstxt) और `llms-full.txt`, [MCP सर्वर](#mcp-server) और उसका डिस्कवरी दस्तावेज़, [Ask AI](#ask-ai) एंडपॉइंट, [साइटमैप](/docs/configuration/seo#sitemap), और [RSS फ़ीड्स](/docs/configuration/seo#rss-feeds) — साथ ही आपकी साइट का नाम, विवरण, स्रोत रिपॉज़िटरी, और [content-signal](/docs/configuration/seo#content-signals) उपयोग नीति। [`deployment.site`](/docs/deployment) सेट होने पर URL निरपेक्ष होते हैं और अन्यथा रूट-सापेक्ष:
 
 ```json agent-readability.json
 {
@@ -383,6 +429,11 @@ seo: {
     "markdown": {
       "contentNegotiation": "text/markdown",
       "pattern": "https://docs.example.com/{route}.md"
+    },
+    "api": {
+      "openapi": "https://docs.example.com/openapi.json",
+      "pages": "https://docs.example.com/api/docs/pages.json",
+      "search": "https://docs.example.com/api/docs/search"
     },
     "llmsFullTxt": "https://docs.example.com/llms-full.txt",
     "llmsTxt": "https://docs.example.com/llms.txt",
@@ -409,12 +460,14 @@ seo: {
 जो एजेंट किसी साइट की जाँच करते हैं उन्हें मैनिफ़ेस्ट खोजने का पता नहीं होता — इसलिए Blume होमपेज पर एक [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) `Link` प्रतिक्रिया हेडर में भी इसका विज्ञापन करता है, IANA-पंजीकृत संबंध प्रकारों का उपयोग करते हुए:
 
 ```http
-Link: </agent-readability.json>; rel="describedby"; type="application/json",
+Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json",
+  </openapi.json>; rel="service-desc"; type="application/json",
+  </agent-readability.json>; rel="describedby"; type="application/json",
   </llms.txt>; rel="describedby"; type="text/plain",
   </index.md>; rel="alternate"; type="text/markdown"
 ```
 
-प्रत्येक प्रविष्टि केवल तभी दिखती है जब उसकी सुविधा चालू हो। `alternate` लिंक होमपेज के Markdown प्रतिबिंब की ओर इंगित करता है — जब होम रूट एक कंटेंट पेज हो तो पेज का अपना [कच्चा Markdown](#raw-markdown), या जब वह लैंडिंग पेज हो तो संश्लेषित `llms.txt` फ़ॉलबैक। जो साइटें APIs भी प्रकाशित करती हैं उन्हें [जनरेट किए गए API कैटलॉग](#api-catalog) की ओर इंगित करने वाली एक `rel="api-catalog"` प्रविष्टि भी मिलती है। हेडर हर उस सतह पर जाता है जिसे Blume नियंत्रित करता है: dev सर्वर (`curl -I localhost:4321` से जाँचें), उत्सर्जित `_headers` फ़ाइल के माध्यम से स्टैटिक बिल्ड (Netlify और Cloudflare), और डिप्लॉय के रूटिंग नियमों के माध्यम से Vercel सर्वर बिल्ड।
+प्रत्येक प्रविष्टि केवल तभी दिखती है जब उसकी सुविधा चालू हो। `alternate` लिंक होमपेज के Markdown प्रतिबिंब की ओर इंगित करता है — जब होम रूट एक कंटेंट पेज हो तो पेज का अपना [कच्चा Markdown](#raw-markdown), या जब वह लैंडिंग पेज हो तो संश्लेषित `llms.txt` फ़ॉलबैक। `service-desc` लिंक ([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)) [JSON API](#json-api) के OpenAPI विवरण की ओर इंगित करता है, और `api-catalog` [जनरेट किए गए API कैटलॉग](#api-catalog) की ओर। हेडर हर उस सतह पर जाता है जिसे Blume नियंत्रित करता है: dev सर्वर (`curl -I localhost:4321` से जाँचें), उत्सर्जित `_headers` फ़ाइल के माध्यम से स्टैटिक बिल्ड (Netlify और Cloudflare), और डि��्लॉय के रूटिंग नियमों के माध्यम से Vercel सर्वर बिल्ड।
 
 हालाँकि, हर एजेंट रूट से प्रवेश नहीं करता — जो किसी खोज परिणाम या साझा किए गए लिंक का अनुसरण करता है, वह किसी गहरे पेज पर पहुँचता है और होमपेज हेडर कभी नहीं देखता। इसलिए हर रेंडर किया गया पेज भी अपने HTML `<head>` में वही डिस्कवरी लिंक ले जाता है, उन्हीं IANA-पंजीकृत संबंधों का उपयोग करते हुए:
 
@@ -432,7 +485,7 @@ Link: </agent-readability.json>; rel="describedby"; type="application/json",
 
 ### API कैटलॉग
 
-जब साइट APIs प्रकाशित करती है, तो Blume `/.well-known/api-catalog` पर एक [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) API कैटलॉग जनरेट करता है — एक [linkset](https://www.rfc-editor.org/rfc/rfc9264) जो एजेंट्स को केवल डोमेन से आपके APIs की गणना करने देता है, हर बिल्ड सतह पर उसके पंजीकृत `application/linkset+json` मीडिया प्रकार के साथ सर्व किया जाता है। कॉन्फ़िगर करने को कुछ नहीं है: कैटलॉग उसी से व्युत्पन्न होता है जो पहले से `blume.config.ts` में है। प्रत्येक [OpenAPI या AsyncAPI संदर्भ](/docs/advanced/api-reference) अपने रेंडर किए गए डॉक्स रूट पर एंकर की गई एक प्रविष्टि बन जाता है, जिसमें `service-doc` उन डॉक्स की ओर और `service-desc` स्पेक की ओर इंगित करता है जब वह किसी फ़ेच-योग्य URL पर रहता हो; [MCP सर्वर](#mcp-server) अपने डिस्कवरी दस्तावेज़ को सेवा विवरण के रूप में लेकर एक प्रविष्टि बन जाता है:
+जब साइट APIs प्रकाशित करती है, तो Blume `/.well-known/api-catalog` पर एक [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) API कैटलॉग जनरेट करता है — एक [linkset](https://www.rfc-editor.org/rfc/rfc9264) जो एजेंट्स को केवल डोमेन से आपके APIs की गणना करने देता है, हर बिल्ड सतह पर उसके पंजीकृत `application/linkset+json` मीडिया प्रकार के साथ सर्व किया जाता है। कॉन्फ़िगर करने को कुछ नहीं है: कैटलॉग उसी से व्युत्पन्न होता है जो पहले से `blume.config.ts` में है। प्रत्येक [OpenAPI या AsyncAPI संदर्भ](/docs/advanced/api-reference) अपने रेंडर किए गए डॉक्स रूट पर एंकर की गई एक प्रविष्टि बन जाता है, जिसमें `service-doc` उन डॉक्स की ओर और `service-desc` स्पेक की ओर इंगित करता है जब वह किसी फ़ेच-योग्य URL पर रहता हो; साइट का अपना [JSON API](#json-api) एक ऐसी प्रविष्टि बन जाता है जिसका वर्णन उसकी `/openapi.json` करती है; और [MCP सर्वर](#mcp-server) अपने डिस्कवरी दस्तावेज़ को सेवा विवरण के रूप में लेकर एक प्रविष्टि बन जाता है:
 
 ```json .well-known/api-catalog
 {
@@ -443,6 +496,18 @@ Link: </agent-readability.json>; rel="describedby"; type="application/json",
         { "href": "https://docs.example.com/reference", "type": "text/html" }
       ],
       "service-desc": [{ "href": "https://api.example.com/openapi.json" }]
+    },
+    {
+      "anchor": "https://docs.example.com/api/docs",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
     },
     {
       "anchor": "https://docs.example.com/mcp",
@@ -460,7 +525,7 @@ Link: </agent-readability.json>; rel="describedby"; type="application/json",
 }
 ```
 
-बिना किसी API संदर्भ और बिना MCP सर्वर वाली साइट कोई कैटलॉग उत्सर्जित नहीं करती — उसमें कुछ होता ही नहीं। हर जगह की तरह, आपके द्वारा स्वयं भेजी गई `public/.well-known/api-catalog` फ़ाइल जनरेट की गई फ़ाइल पर भारी पड़ती है।
+बिना किसी API संदर्भ, बिना MCP सर्वर, और [JSON API](#json-api) बंद किए हुए साइट कोई कैटलॉग उत्सर्जित नहीं करती — उसमें कुछ होता ही नहीं। हर जगह की तरह, आपके द्वारा स्वयं भेजी गई `public/.well-known/api-catalog` फ़ाइल जनरेट की गई फ़ाइल पर भारी पड़ती है।
 
 ### WebMCP
 
@@ -484,7 +549,7 @@ ai: {
 }
 ```
 
-पथ आपके प्रोजेक्ट रूट के सापेक्ष ���ल होता है, और `SKILL.md` वाली प्रत्येक उपडायरेक्टरी एक प्रकाशित स्किल बन जाती है। जो स्किल केवल एक अकेली `SKILL.md` है, उसे शब्दशः `/.well-known/agent-skills/<name>/SKILL.md` (`type: "skill-md"`) पर कॉपी किया जाता है; सहायक संसाधनों (`scripts/`, `references/`, `assets/`) वाली स्किल को एक नियतात्मक `.tar.gz` (`type: "archive"`) में बंडल किया जाता है ताकि अनपैक करने के बाद उसके सापेक्ष संदर्भ हल हों, स्क्रिप्ट एक्ज़ीक्यूट बिट्स संरक्षित रखते हुए। `/.well-known/agent-skills/index.json` पर डिस्कवरी इंडेक्स v0.2.0 `$schema` रखता है और, प्रति स्किल, उसका नाम, प्रकार, विवरण (`SKILL.md` फ़्रंटमैटर से), आर्टिफ़ैक्ट URL, और SHA-256 डाइजेस्ट जिसके विरुद्ध क्लाइंट डाउनलोड सत्यापित करते हैं।
+पथ आपके प्रोजेक्ट रूट के सापेक्ष हल होता है, और `SKILL.md` वाली प्रत्येक उपडायरेक्टरी एक प्रकाशित स्किल बन जाती है। जो स्किल केवल एक अकेली `SKILL.md` है, उसे शब्दशः `/.well-known/agent-skills/<name>/SKILL.md` (`type: "skill-md"`) पर कॉपी किया जाता है; सहायक संसाधनों (`scripts/`, `references/`, `assets/`) वाली स्किल को एक नियतात्मक `.tar.gz` (`type: "archive"`) में बंडल किया जाता है ताकि अनपैक करने के बाद उसके सापेक्ष संदर्भ हल हों, स्क्रिप्ट एक्ज़ीक्यूट बिट्स संरक्षित रखते हुए। `/.well-known/agent-skills/index.json` पर डिस्कवरी इंडेक्स v0.2.0 `$schema` रखता है और, प्रति स्किल, उसका नाम, प्रकार, विवरण (`SKILL.md` फ़्रंटमैटर से), आर्टिफ़ैक्ट URL, और SHA-256 डाइजेस्ट जिसके विरुद्ध क्लाइंट डाउनलोड सत्यापित करते हैं।
 
 जिन स्किल्स का `name`/`description` अनुपस्थित या स्पेक-अमान्य है, उन्हें टूटी हुई प्रकाशित करने के बजाय एक बिल्ड चेतावनी के साथ छोड़ दिया जाता है, और आपके द्वारा स्वयं भेजी गई `public/.well-known/agent-skills/index.json` पूरी सतह पर नियंत्रण ले लेती है।
 

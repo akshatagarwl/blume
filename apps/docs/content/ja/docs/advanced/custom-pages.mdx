@@ -275,7 +275,7 @@ import data from "blume:data";
 
 Blume はデフォルトの **not found** ページを標準で同梱しています: サイトのクローム（ヘッダー、検索、テーマ）でラップされた中央揃えの「404」メッセージで、マッチしないあらゆる URL に対して配信されます。`blume build` はこれを `404.html` に書き出し、静的ホストが自動的に配信します。また `blume dev` は不明なルートに対してこれを表示します。メッセージの下には **Where to look next** のリストがあり、すべてのトップレベルセクションに加えて、存在する場合は `sitemap.xml` と [`llms.txt`](/docs/configuration/ai#llmstxt) のインデックスへのリンクが並ぶため、読者 — あるいは古い URL をたどったエージェント — が戻る道を持てます。
 
-このページには `/404.md` という Markdown の対応版もあり、同じ復帰用リンクを備えています（[`deployment.site`](/docs/deployment) が設定されていれば絶対 URL になります）。[Vercel のサーバービルド](/docs/deployment#server-rendering)では、存在しないページへのリクエストが [`Accept: text/markdown`](/docs/configuration/ai#content-negotiation) を送る場合、あるいはどのページにも裏付けられていない `.md` URL を要求する場合、HTML のシェルではなく `404` ステータス付きでその Markdown の本文が返されます — つまりエージェントは、次にどこへ行くべきかを知るためにクロームだらけのページを解析する必要がまったくありません。
+このページには `/404.md` という Markdown の対応版と、`/404.json` という JSON の対応版（[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) の problem details）もあり、同じ復帰用リンク（[`deployment.site`](/docs/deployment) が設定されていれば絶対 URL になります）に加えて、JSON API が有効な場合は [`openapi.json`](/docs/configuration/ai#json-api) の記述も備えています。[Vercel のサーバービルド](/docs/deployment#server-rendering)では、存在しないページへのリクエストが [`Accept: text/markdown`](/docs/configuration/ai#content-negotiation) を送る場合、あるいはどのページにも裏付けられていない `.md` URL を要求する場合、HTML のシェルではなく `404` ステータス付きでその Markdown の本文が返されます。`Accept: application/json` を送る場合、あるいはどのファイルにも裏付けられていない `.json` URL を要求する場合は problem ドキュメントが返されます — つまりエージェントは、次にどこへ行くべきかを知るためにクロームだらけのページを解析する必要がまったくありません。
 
 これを自作のものに置き換えるには、`pages/404.astro` を追加します。`pages/changelog.astro` がチェンジログを引き継ぐのと同じように、このファイルが `/404` ルートを所有します — あなたのページが優先され、デフォルトは破棄されます。他のカスタムページと同様に、`PageLayout` または `RootLayout` で構築してください:
 

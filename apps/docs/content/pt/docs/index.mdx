@@ -32,7 +32,7 @@ O Blume é construído sobre Astro e Vite e renderiza HTML estático por padrão
 
 ### Pronto para IA desde o início
 
-Todo site Blume fala a língua das máquinas com fluência. Ele gera [`llms.txt` e `llms-full.txt`](/docs/configuration/ai), serve o Markdown bruto de qualquer página adicionando `.md` à sua URL e oferece aos leitores as ações **Copiar como Markdown** e **Abrir no chat** em todas as páginas. Adicione um assistente **Ask AI** opcional na página, ou hospede um [**servidor MCP**](/docs/configuration/ai#mcp-server) para que agentes de programação como Claude Code e Cursor possam pesquisar e ler sua documentação diretamente — sem scraping, sem serviço hospedado. Seu Markdown é a fonte da verdade tanto para humanos quanto para modelos.
+Todo site Blume fala a língua das máquinas com fluência. Ele gera [`llms.txt` e `llms-full.txt`](/docs/configuration/ai), serve o Markdown bruto de qualquer página adicionando `.md` à sua URL, expõe uma [API JSON descrita por OpenAPI](/docs/configuration/ai#json-api) e oferece aos leitores as ações **Copiar como Markdown** e **Abrir no chat** em todas as páginas. Adicione um assistente **Ask AI** opcional na página, ou hospede um [**servidor MCP**](/docs/configuration/ai#mcp-server) para que agentes de programação como Claude Code e Cursor possam pesquisar e ler sua documentação diretamente — sem scraping, sem serviço hospedado. Seu Markdown é a fonte da verdade tanto para humanos quanto para modelos.
 
 ### Configuração zero — até o template
 
@@ -46,7 +46,7 @@ Seu [`blume.config.ts`](/docs/configuration) e cada [`meta.ts`](/docs/content/me
 
 - **Componentes** — callouts, cards, steps, tabs, accordions, badges, árvores de arquivos e tabelas de parâmetros, utilizáveis em MDX [sem imports](/docs/content/components).
 - **Busca local** — o Orama funciona em dev e em produção; o Pagefind está a uma flag de distância para sites grandes. Sem índice hospedado.
-- **IA** — [`llms.txt`, URLs de Markdown bruto, Copiar como Markdown, Abrir no chat, um assistente Ask AI e um servidor MCP hospedado](/docs/configuration/ai).
+- **IA** — [`llms.txt`, URLs de Markdown bruto, uma API JSON com descrição OpenAPI, Copiar como Markdown, Abrir no chat, um assistente Ask AI e um servidor MCP hospedado](/docs/configuration/ai).
 - **Navegação** — inferida a partir dos arquivos, refinada com `meta.ts` ou configuração.
 - **SEO** — metadados, imagens Open Graph, feeds RSS e JSON-LD, [já integrados](/docs/configuration/seo).
 - **Personalização** — substituições de componentes, ilhas React, páginas personalizadas, tokens de tema e um registro de componentes-fonte via `blume add`.

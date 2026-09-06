@@ -1,10 +1,10 @@
 ---
 title: AI
 description: >-
-  llms.txt でドキュメントを機械可読にし、ページ内の Ask AI アシスタント（任意）を追加し、コーディングエージェント向けにホスト型 MCP サーバーを公開します。
+  llms.txt と OpenAPI で記述された JSON API でドキュメントを機械可読にし、ページ内の Ask AI アシスタント（任意）を追加し、コーディングエージェント向けにホスト型 MCP サーバーを公開します。
 ---
 
-Blume にはいくつかの AI 機能があります。外部ツール向けの機械可読ドキュメント（`llms.txt`、既定で有効）、ページ内の **Ask AI** アシスタント、そしてコーディングエージェント向けのホスト型 **MCP サーバー** です。Ask AI と MCP はオプトインで、機能を有効にするまで静的ドキュメントは完全に静的なままです。
+Blume にはいくつかの AI 機能があります。外部ツール向けの機械可読ドキュメント（`llms.txt` と、OpenAPI の記述を伴う [JSON API](#json-api)。どちらも既定で有効）、ページ内の **Ask AI** アシスタント、そしてコーディングエージェント向けのホスト型 **MCP サーバー** です。Ask AI と MCP はオプトインで、機能を有効にするまで静的ドキュメントは完全に静的なままです。
 
 ## llms.txt
 
@@ -365,6 +365,52 @@ deployment: {
 claude mcp add --transport http my-docs https://docs.example.com/mcp
 ```
 
+## JSON API
+
+すべての Blume サイトは、ドキュメントを小さな読み取り専用の **JSON API** としても配信します。これは [MCP サーバー](#mcp-server)のツールの REST 版で、同じページスナップショットの上に構築され、MCP ではなく素の HTTP を話すエージェントや関数呼び出しフレームワーク向けのものです。既定で有効で、設定は不要です。
+
+| エンドポイント | 返される内容 |
+| --- | --- |
+| `/api/docs/pages.json` | すべてのページを、そのルート、タイトル、説明、コンテントタイプ、ロケール、ファセット、そしてレンダリング版・Markdown 版・JSON 版の URL とともに返します。 |
+| `/api/docs/pages/{route}.json` | 1 ページ分。索引エントリーに加えてエージェント向け Markdown（`get_page` が返すのと同じ本文）を返します。`{route}` は先頭のスラッシュを除いたページのルートで、ホームは `index` です。 |
+| `/api/docs/navigation.json` | ナビゲーションツリー（ヘッダーのタブとサイドバーの階層）。 |
+| `/api/docs/search?q=` | 全文検索。`search_docs` と同じ `limit`、`contentTypes`、`locale`、`version`、`filters[key]` によるスコープ指定に対応します。サーバー出力でのみ利用可能です。 |
+| `/openapi.json` | 機械可読な面全体を記述する OpenAPI 3.1 の記述。 |
+
+ページ索引、ページごとのドキュメント、ナビゲーションはプリレンダリングされるため、静的サイトはどのホストからでもそれらをファイルとして配信できます。検索はライブのエンドポイントで、[サーバー出力](/docs/deployment#server-rendering)でのみ存在し、そこでは `search_docs` と同じインデックスで動作します。エラーは [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) の problem details（`application/problem+json`）で、安定した `code`、`detail`、そしてエージェントに次の行き先を伝える `resolution` ヒントを備えています。存在しないページ、空の検索クエリ、そしてサーバー出力ではどのエンドポイントも応答しない `/api/…` の URL が対象です。
+
+```json
+{
+  "code": "API_ROUTE_NOT_FOUND",
+  "detail": "No API route exists at /api/nope.",
+  "instance": "/api/nope",
+  "links": [
+    {
+      "href": "https://docs.example.com/openapi.json",
+      "label": "OpenAPI description"
+    },
+    {
+      "href": "https://docs.example.com/api/docs/pages.json",
+      "label": "Page index"
+    }
+  ],
+  "resolution": "Discover the available operations through the OpenAPI description at https://docs.example.com/openapi.json, or list every page at https://docs.example.com/api/docs/pages.json.",
+  "status": 404,
+  "title": "API route not found",
+  "type": "about:blank"
+}
+```
+
+`/openapi.json` の **OpenAPI 文書**は設定からビルドごとに生成されるため、デプロイされたサイトが実際に配信するものだけを記述します。一意な `operationId`、型付きのパラメーター、レスポンススキーマを備えたすべての JSON エンドポイントに加えて、隣り合うテキストの面（[`.md` ミラー](#raw-markdown)、[`llms.txt`](#llmstxt) と `llms-full.txt`、[`agent-readability.json`](#agent-readability)）、そして有効な場合は [MCP エンドポイント](#mcp-server)も含まれます。OpenAPI の記述からツールを組み立てるフレームワークは、MCP クライアントと同じ範囲に到達できます。この文書は [API カタログ](#api-catalog)、[可読性マニフェスト](#agent-readability)、ホームページの `Link` ヘッダー（`rel="service-desc"`）、そして `llms.txt` からリンクされます。
+
+これらはあなた自身の [API リファレンス](/docs/advanced/api-reference)には一切影響しません。ドキュメント化された仕様はページとしてレンダリングされ、`/openapi.json` で配信されることはなく、カタログには両方が掲載されます。自分で用意した `public/openapi.json` はそのルートを引き継ぎます（JSON エンドポイントはそのまま残ります）。`/api/…` のキャッチオールは、ドキュメントのセクションが `/api` 名前空間から配信される場合（`content/api/overview.md`）や、カスタムページが `/api/` 配下の残りのルートを保持している場合には道を譲るため、それらのページが引き続き優先されます。これらを一切公開しないようにするには `ai.api` を `false` に設定します。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  api: false,
+}
+```
+
 ## エージェント可読性
 
 Blume はサイトのルートに **`/agent-readability.json`** マニフェストを書き出し、このページで説明したエージェント向けの機能を索引化します。これにより、エージェントは規約を推測したり HTML をスクレイピングしたりせずに、1 回の取得で発見できます。`llms.txt` と同様、既定で有効です。
@@ -375,7 +421,7 @@ seo: {
 }
 ```
 
-マニフェストには有効にしたものだけが列挙されます。[生の Markdown](#raw-markdown) ミラーのパターン、[`llms.txt`](#llmstxt) と `llms-full.txt`、[MCP サーバー](#mcp-server)とそのディスカバリー文書、[Ask AI](#ask-ai) のエンドポイント、[サイトマップ](/docs/configuration/seo#sitemap)、[RSS フィード](/docs/configuration/seo#rss-feeds)に加えて、サイト名、説明、ソースリポジトリ、[コンテントシグナル](/docs/configuration/seo#content-signals)の利用ポリシーが含まれます。URL は [`deployment.site`](/docs/deployment) が設定されていれば絶対 URL に、そうでなければルート相対になります。
+マニフェストには有効にしたものだけが列挙されます。[生の Markdown](#raw-markdown) ミラーのパターン、[JSON API](#json-api) とその OpenAPI の記述、[`llms.txt`](#llmstxt) と `llms-full.txt`、[MCP サーバー](#mcp-server)とそのディスカバリー文書、[Ask AI](#ask-ai) のエンドポイント、[サイトマップ](/docs/configuration/seo#sitemap)、[RSS フィード](/docs/configuration/seo#rss-feeds)に加えて、サイト名、説明、ソースリポジトリ、[コンテントシグナル](/docs/configuration/seo#content-signals)の利用ポリシーが含まれます。URL は [`deployment.site`](/docs/deployment) が設定されていれば絶対 URL に、そうでなければルート相対になります。
 
 ```json agent-readability.json
 {
@@ -383,6 +429,11 @@ seo: {
     "markdown": {
       "contentNegotiation": "text/markdown",
       "pattern": "https://docs.example.com/{route}.md"
+    },
+    "api": {
+      "openapi": "https://docs.example.com/openapi.json",
+      "pages": "https://docs.example.com/api/docs/pages.json",
+      "search": "https://docs.example.com/api/docs/search"
     },
     "llmsFullTxt": "https://docs.example.com/llms-full.txt",
     "llmsTxt": "https://docs.example.com/llms.txt",
@@ -409,12 +460,14 @@ seo: {
 サイトを探索するエージェントは、マニフェストを探すべきだと知りません。そこで Blume は、IANA 登録済みのリレーションタイプを用いて、ホームページの [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) `Link` レスポンスヘッダーでもマニフェストを告知します。
 
 ```http
-Link: </agent-readability.json>; rel="describedby"; type="application/json",
+Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json",
+  </openapi.json>; rel="service-desc"; type="application/json",
+  </agent-readability.json>; rel="describedby"; type="application/json",
   </llms.txt>; rel="describedby"; type="text/plain",
   </index.md>; rel="alternate"; type="text/markdown"
 ```
 
-各エントリーは、その機能が有効な場合にのみ現れます。`alternate` リンクはホームページの Markdown ミラーを指します。ホームのルートがコンテンツページであればそのページ自身の[生の Markdown](#raw-markdown)、ランディングページであれば合成された `llms.txt` フォールバックです。API を公開しているサイトには、[生成された API カタログ](#api-catalog)を指す `rel="api-catalog"` エントリーも追加されます。このヘッダーは、Blume が制御するすべての面に付与されます。開発サーバー（`curl -I localhost:4321` で確認できます）、出力される `_headers` ファイル経由の静的ビルド（Netlify と Cloudflare）、そしてデプロイのルーティングルール経由の Vercel サーバービルドです。
+各エントリーは、その機能が有効な場合にのみ現れます。`alternate` リンクはホームページの Markdown ミラーを指します。ホームのルートがコンテンツページであればそのページ自身の[生の Markdown](#raw-markdown)、ランディングページであれば合成された `llms.txt` フォールバックです。`service-desc` リンク（[RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)）は [JSON API](#json-api) の OpenAPI の記述を、`api-catalog` は[生成された API カタログ](#api-catalog)を指します。このヘッダーは、Blume が制御するすべての面に付与されます。開発サーバー（`curl -I localhost:4321` で確認できます）、出力される `_headers` ファイル経由の静的ビルド（Netlify と Cloudflare）、そしてデプロイのルーティングルール経由の Vercel サーバービルドです。
 
 とはいえ、すべてのエージェントがルートから入ってくるわけではありません。検索結果や共有リンクをたどってきたエージェントは深い階層のページに着地し、ホームページのヘッダーを目にすることはありません。そこで、レンダリングされるすべてのページも、同じ IANA 登録済みのリレーションを用いて、HTML の `<head>` に同じディスカバリーリンクを備えています。
 
@@ -432,7 +485,7 @@ Link: </agent-readability.json>; rel="describedby"; type="application/json",
 
 ### API カタログ
 
-サイトが API を公開している場合、Blume は `/.well-known/api-catalog` に [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) の API カタログを生成します。これは[リンクセット](https://www.rfc-editor.org/rfc/rfc9264)で、エージェントがドメインだけから API を列挙できるようにするもので、登録済みの `application/linkset+json` メディアタイプで、あらゆるビルド面において配信されます。設定は不要で、カタログは `blume.config.ts` にすでにある情報から導出されます。各 [OpenAPI または AsyncAPI リファレンス](/docs/advanced/api-reference)は、レンダリングされたドキュメントのルートをアンカーとするエントリーになり、`service-doc` がそのドキュメントを、`service-desc` が仕様（取得可能な URL にある場合）を指します。[MCP サーバー](#mcp-server)は、ディスカバリー文書をサービス記述とするエントリーになります。
+サイトが API を公開している場合、Blume は `/.well-known/api-catalog` に [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) の API カタログを生成します。これは[リンクセット](https://www.rfc-editor.org/rfc/rfc9264)で、エージェントがドメインだけから API を列挙できるようにするもので、登録済みの `application/linkset+json` メディアタイプで、あらゆるビルド面において配信されます。設定は不要で、カタログは `blume.config.ts` にすでにある情報から導出されます。各 [OpenAPI または AsyncAPI リファレンス](/docs/advanced/api-reference)は、レンダリングされたドキュメントのルートをアンカーとするエントリーになり、`service-doc` がそのドキュメントを、`service-desc` が仕様（取得可能な URL にある場合）を指します。サイト自身の [JSON API](#json-api) は、その `/openapi.json` によって記述されるエントリーになります。そして [MCP サーバー](#mcp-server)は、ディスカバリー文書をサービス記述とするエントリーになります。
 
 ```json .well-known/api-catalog
 {
@@ -443,6 +496,18 @@ Link: </agent-readability.json>; rel="describedby"; type="application/json",
         { "href": "https://docs.example.com/reference", "type": "text/html" }
       ],
       "service-desc": [{ "href": "https://api.example.com/openapi.json" }]
+    },
+    {
+      "anchor": "https://docs.example.com/api/docs",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
     },
     {
       "anchor": "https://docs.example.com/mcp",
@@ -460,7 +525,7 @@ Link: </agent-readability.json>; rel="describedby"; type="application/json",
 }
 ```
 
-API リファレンスも MCP サーバーもないサイトではカタログは出力されません。中身が何もないからです。他と同じく、自分で用意した `public/.well-known/api-catalog` ファイルは生成されたものより優先されます。
+API リファレンスも MCP サーバーもなく、[JSON API](#json-api) も無効にしているサイトではカタログは出力されません。中身が何もないからです。他と同じく、自分で用意した `public/.well-known/api-catalog` ファイルは生成されたものより優先されます。
 
 ### WebMCP
 
