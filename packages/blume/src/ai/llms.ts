@@ -8,10 +8,8 @@ import type { NavNode, Navigation, PageRecord } from "../core/types.ts";
 import { buildRssFeeds } from "../deploy/rss.ts";
 import { API_CATALOG_PATH, hasApiCatalog } from "./api-catalog.ts";
 import { API_PAGES_PATH, OPENAPI_PATH } from "./api/paths.ts";
-import {
-  downlevelComponents,
-  exampleComponentSerializers,
-} from "./component-markdown.ts";
+import { downlevelComponents } from "./component-markdown.ts";
+import { projectComponentSerializers } from "./serializers.ts";
 import { AGENT_SKILLS_DIR, AGENT_SKILLS_INDEX_PATH } from "./skills.ts";
 import type { SkillArtifact } from "./skills.ts";
 import { applyAgentVisibility } from "./visibility.ts";
@@ -292,12 +290,7 @@ const buildFull = async (project: BlumeProject): Promise<string> => {
   const pages = eligiblePages(project, { versions: "current" }).toSorted(
     (a, b) => a.route.localeCompare(b.route)
   );
-  // Downlevel `<Component>` to its example's source; a same-name user
-  // `markdownComponents` entry is spread last and still wins.
-  const components = {
-    ...exampleComponentSerializers(project.examples ?? {}),
-    ...config.ai.markdownComponents,
-  };
+  const components = projectComponentSerializers(project);
 
   const sections = await Promise.all(
     pages.map(async (page) => {
