@@ -1753,6 +1753,7 @@ import { getEntry, render } from "astro:content";
 import type { CollectionKey } from "astro:content";
 import RootLayout from "blume/components/layout/RootLayout.astro";
 import { withBase } from "blume/components/islands/base-path.ts";
+import { stripBasePath, withBasePath } from "blume/core/base-path.ts";
 import { resolveSlot } from "blume/components/layout/overrides.ts";
 import Accordion from "blume/components/content/Accordion.astro";
 import AccordionItem from "blume/components/content/AccordionItem.astro";
@@ -1976,33 +1977,22 @@ const localeAlternates =
 const defaultAlt = i18n ? (alternates ?? []).find((alt) => alt.locale === i18n.defaultLocale) : null;
 const xDefault = defaultAlt && base ? absolute(defaultAlt.path) : null;
 
-// \`route\` arrives with the base path already applied, so the locale segment it
-// carries sits *after* the base (\`/docs/ja/guide\`). Locale prefixing is
-// base-less (\`localePrefix\` yields \`/ja\`), so both stripping and re-adding a
-// locale have to happen in base-less space with the base re-applied at the end
-// — otherwise \`stripLocale\` matches nothing and \`localizeRoute\` prepends a
-// second prefix, producing \`/ja/docs/ja/guide\`. Only pages with no
-// \`alternates\` reach this fallback, which is why a generated reference page
-// under a base path hit it while hand-written translations did not.
-const baseMount = data.config.basePath ?? "";
-const stripMount = (path: string) => {
-  const trimmed = baseMount.replace(/\\/+$/u, "");
-  if (!trimmed) {
-    return path;
-  }
-  if (path === trimmed) {
-    return "/";
-  }
-  return path.startsWith(\`\${trimmed}/\`) ? path.slice(trimmed.length) : path;
-};
-const applyMount = (path: string) => {
-  const trimmed = baseMount.replace(/\\/+$/u, "");
-  if (!trimmed || path === trimmed || path.startsWith(\`\${trimmed}/\`)) {
-    return path;
-  }
-  return path === "/" ? trimmed : \`\${trimmed}\${path}\`;
-};
-const logicalRoute = i18n ? stripLocale(stripMount(route), locale) : route;
+// \`route\` arrives with \`basePath\` already applied, so the locale segment it
+// carries sits *after* the base (\`/docs/ja/guide\`), while \`localePrefix\` is
+// base-less (\`/ja\`). Stripping and re-adding a locale therefore happen in
+// base-less space, with the base re-applied at the end — the same
+// \`withBasePath(basePath, localizeRoute(...))\` composition the manifest uses to
+// build every real route. Done in based space, \`stripLocale\` matches nothing
+// and \`localizeRoute\` prepends a second prefix (\`/ja/docs/ja/guide\`). Only a
+// switcher entry for a locale with no real translation reaches this fallback:
+// a partially translated hand-written page for its missing locales, or a
+// generated reference (which has no \`alternates\` at all) for every locale
+// but its own.
+const mountLocalized = (logical: string, codeArg: string) =>
+  withBasePath(data.config.basePath, localizeRoute(logical, codeArg));
+const logicalRoute = i18n
+  ? stripLocale(stripBasePath(data.config.basePath, route), locale)
+  : route;
 const localeSwitch = i18n
   ? i18n.locales.map((l) => {
       const alt = (alternates ?? []).find((x) => x.locale === l.code);
@@ -2010,7 +2000,7 @@ const localeSwitch = i18n
         code: l.code,
         current: l.code === locale,
         dir: l.dir,
-        href: alt ? alt.path : applyMount(localizeRoute(logicalRoute, l.code)),
+        href: alt ? alt.path : mountLocalized(logicalRoute, l.code),
         label: l.label,
         untranslated: !alt,
       };
@@ -2024,12 +2014,9 @@ const localeSwitch = i18n
 // (manifest \`versionAlternates\` paths arrive with the base already applied).
 const versionRootFor = (id: string) => {
   const logical = id ? \`/\${id}\` : "/";
-  const localized = i18n ? localizeRoute(logical, locale) : logical;
-  const mount = data.config.basePath;
-  if (!mount) {
-    return localized;
-  }
-  return localized === "/" ? mount : \`\${mount}\${localized}\`;
+  return i18n
+    ? mountLocalized(logical, locale)
+    : withBasePath(data.config.basePath, logical);
 };
 const samePageSwitch = versionsConfig
   ? versionsConfig.switcher.redirect === "same-page"
