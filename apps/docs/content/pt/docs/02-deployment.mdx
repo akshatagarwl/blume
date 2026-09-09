@@ -105,7 +105,7 @@ Um build de servidor inclui tudo o que um build estático inclui, além de quais
 Na Vercel e na Cloudflare, um build de servidor também ativa a [negociação de conteúdo com `Accept: text/markdown`](/docs/discoverability/markdown#content-negotiation), de modo que um agente que solicite qualquer página de conteúdo com esse cabeçalho recebe seu espelho em Markdown puro na mesma URL. Na Vercel, o Blume insere reescritas condicionadas ao cabeçalho na configuração de roteamento da implantação; na Cloudflare, ele gera um pequeno Worker na frente do Worker do Astro e restringe `assets.run_worker_first` às rotas de conteúdo, já que, de outra forma, a plataforma serviria as páginas pré-renderizadas antes de qualquer código de servidor ser executado — os demais recursos mantêm seu caminho rápido sem Worker.
 
 :::note
-Os recursos de servidor têm sua própria configuração — por exemplo, o Ask AI precisa de uma chave de API de modelo. Consulte o [guia de IA](/docs/configuration/ask-ai) para a configuração.
+Os recursos de servidor têm sua própria configuração — por exemplo, o Ask AI precisa de uma chave de API de modelo. Consulte o [guia do Ask AI](/docs/configuration/ask-ai) para a configuração.
 :::
 
 ## Redirecionamentos

@@ -1,0 +1,84 @@
+---
+title: Metadaten
+description: >-
+  Die Head-Tags, die jede Seite rendert — Titel, Beschreibung, Canonical, Open Graph und X-Card-Tags — und wie du sie pro Seite über das Frontmatter überschreibst.
+---
+
+Jede Seite rendert die üblichen `<head>`-Tags aus deiner Konfiguration und dem Frontmatter — ganz ohne Konfigurationsaufwand. Wo sich ein Wert anpassen lässt, findest du ihn unter dem Schlüssel `seo` in `blume.config.ts` oder unter `seo` im Frontmatter einer Seite.
+
+- `<title>` — der Seitentitel plus dein Website-`title`.
+- `<meta name="description">` und `og:description` — die `description` der Seite, ersatzweise die `description` der Website.
+- `og:title` und `og:site_name` — der Seitentitel und dein Website-`title`.
+- `<link rel="canonical">` und `og:url` — die absolute URL der Seite (sofern [`deployment.site`](/docs/deployment) gesetzt ist).
+- `og:type` — `article` bei Blogbeiträgen und Changelog-Einträgen, `website` überall sonst. Artikelseiten geben außerdem `article:published_time` und `article:modified_time` aus dem `date` der Seite und dem Zeitstempel der letzten Änderung aus.
+- `og:image` — das [OG-Bild](/docs/discoverability/open-graph) für die Seite. Eine generierte Card deklariert zusätzlich ihre `og:image:width`, `og:image:height`, `og:image:type` und `og:image:alt`, damit ein Crawler die Card layouten kann, ohne sie vorher abzurufen; ein `seo.image`, das du selbst angibst, deklariert nichts davon, da Größe und Format unbekannt sind.
+- `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` — die X-Card. Seiten mit Bild bekommen die breite Variante `summary_large_image`; Seiten ohne Bild bekommen weiterhin die kompakte `summary`-Card, statt als nackter Link dargestellt zu werden.
+
+## X-Attribution
+
+X liest alles Weitere auf der Card aus den `og:*`-Tags, die einzigen Werte, die es nicht ableiten kann, sind also die Accounts, die genannt werden sollen. Setze sie unter `seo.x`, und Blume gibt `twitter:site` (der Account deiner Website) und `twitter:creator` (der des Autors) aus. Das `@` ist optional — `acme` und `@acme` funktionieren beide.
+
+```ts blume.config.ts lineNumbers
+seo: {
+  x: { handle: "@acme", creator: "@jane" },
+}
+```
+
+Eine Seite kann ihren eigenen Autor angeben — genau das, was du für einen Gastbeitrag brauchst:
+
+```yaml lineNumbers
+---
+title: How we shipped it
+seo:
+  x:
+    creator: "@guestauthor"
+---
+```
+
+## Überschreibungen pro Seite
+
+Überschreibe jedes der anderen Tags pro Seite mit `seo`-Frontmatter:
+
+```yaml lineNumbers
+---
+title: Pricing
+description: Plans and pricing for every team size.
+seo:
+  title: Pricing — Acme
+  canonical: https://acme.com/pricing
+  noindex: false
+---
+```
+
+<TypeTable
+  type={{
+    "seo.title": {
+      type: "string",
+      description: "Überschreibt <title> und og:title für diese Seite.",
+    },
+    "seo.description": {
+      type: "string",
+      description: "Überschreibt meta + og:description.",
+    },
+    "seo.image": {
+      type: "string",
+      description: "Eigenes Social-Bild (siehe Open-Graph-Bilder).",
+    },
+    "seo.canonical": {
+      type: "string",
+      description: "Überschreibt die Canonical-URL.",
+    },
+    "seo.noindex": {
+      type: "boolean",
+      description:
+        "Gibt robots noindex aus und überspringt strukturierte Daten.",
+    },
+    "seo.x.creator": {
+      type: "string",
+      description:
+        "Schreibt diese Seite einem X-Account zu (twitter:creator) und überschreibt damit seo.x.creator aus deiner Konfiguration.",
+    },
+  }}
+/>
+
+Eine `noindex`-Seite fällt außerdem aus der [Sitemap](/docs/discoverability/sitemap-and-robots#sitemap) heraus und überspringt [strukturierte Daten](/docs/discoverability/structured-data).

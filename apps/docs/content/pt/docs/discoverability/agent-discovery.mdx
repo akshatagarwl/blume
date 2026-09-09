@@ -1,0 +1,197 @@
+---
+title: Descoberta de agentes
+description: >-
+  Como os agentes encontram sua superfície legível por máquina sem adivinhar — o manifesto de legibilidade para agentes, cabeçalhos Link, o catálogo de APIs da RFC 9727, WebMCP, skills publicadas, descoberta via DNS e chaves de Web Bot Auth.
+---
+
+Publicar `llms.txt`, espelhos em Markdown, uma API JSON e um servidor MCP é só metade do trabalho — um agente ainda precisa encontrar tudo isso. O Blume anuncia a superfície inteira pelas convenções que os agentes de fato sondam: um manifesto na raiz do site, cabeçalhos `Link` e tags `<link>`, arquivos well-known e o próprio model context do navegador. Tudo aqui vem ligado por padrão e é derivado do que você já habilitou.
+
+## Legibilidade para agentes
+
+O Blume escreve um manifesto **`/agent-readability.json`** na raiz do seu site que indexa a superfície voltada a agentes descrita ao longo desta seção — assim um agente consegue descobri-la com uma única requisição, em vez de adivinhar convenções ou raspar HTML. Como o `llms.txt`, ele vem ligado por padrão:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  agentReadability: true,
+}
+```
+
+O manifesto lista apenas o que você habilitou — o padrão de espelho em [Markdown bruto](/docs/discoverability/markdown), a [API JSON](/docs/discoverability/json-api) e sua descrição OpenAPI, [`llms.txt`](/docs/discoverability/llms-txt) e `llms-full.txt`, o [servidor MCP](/docs/discoverability/mcp) e seu documento de descoberta, o endpoint do [Ask AI](/docs/configuration/ask-ai), o [sitemap](/docs/discoverability/sitemap-and-robots#sitemap) e os [feeds RSS](/docs/discoverability/rss) — junto com o nome do seu site, a descrição, o repositório de origem e a política de uso do [content-signal](/docs/discoverability/sitemap-and-robots#content-signals). As URLs são absolutas quando [`deployment.site`](/docs/deployment) está definido, e relativas à raiz caso contrário:
+
+```json agent-readability.json
+{
+  "artifacts": {
+    "markdown": {
+      "contentNegotiation": "text/markdown",
+      "pattern": "https://docs.example.com/{route}.md"
+    },
+    "api": {
+      "openapi": "https://docs.example.com/openapi.json",
+      "pages": "https://docs.example.com/api/docs/pages.json",
+      "search": "https://docs.example.com/api/docs/search"
+    },
+    "llmsFullTxt": "https://docs.example.com/llms-full.txt",
+    "llmsTxt": "https://docs.example.com/llms.txt",
+    "mcp": {
+      "discovery": "https://docs.example.com/.well-known/mcp.json",
+      "url": "https://docs.example.com/mcp"
+    }
+  },
+  "description": "Docs for the Acme API.",
+  "generator": "blume@1.0.0",
+  "name": "Acme Docs",
+  "site": "https://docs.example.com",
+  "contentUsage": { "search": true, "ai-input": true, "ai-train": true },
+  "repository": "https://github.com/acme/docs"
+}
+```
+
+O campo `contentNegotiation` aparece apenas quando o site publicado realmente respeita o cabeçalho `Accept: text/markdown` — veja [negociação de conteúdo](/docs/discoverability/markdown#content-negotiation); em todo outro tipo de deploy, o manifesto anuncia somente o padrão de espelho `.md`.
+
+Defina `seo.agentReadability` como `false` para pular isso, ou publique seu próprio `public/agent-readability.json` para assumir o controle — o Blume nunca sobrescreve um arquivo que você coloca em `public/`.
+
+## Cabeçalho Link de descoberta
+
+Agentes que sondam um site não sabem que devem procurar pelo manifesto — então o Blume também o anuncia em um cabeçalho de resposta `Link` da [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) na página inicial, usando tipos de relação registrados na IANA:
+
+```http
+Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json",
+  </openapi.json>; rel="service-desc"; type="application/json",
+  </agent-readability.json>; rel="describedby"; type="application/json",
+  </llms.txt>; rel="describedby"; type="text/plain",
+  </index.md>; rel="alternate"; type="text/markdown"
+```
+
+Cada entrada aparece somente quando o recurso correspondente está ativo. O link `alternate` aponta para o espelho em Markdown da página inicial — o [Markdown bruto](/docs/discoverability/markdown) da própria página quando a rota inicial é uma página de conteúdo, ou o fallback sintetizado do `llms.txt` quando é uma landing page. O link `service-desc` ([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)) aponta para a descrição OpenAPI da [API JSON](/docs/discoverability/json-api), e o `api-catalog` para o [catálogo de APIs gerado](#api-catalog). O cabeçalho acompanha todas as superfícies que o Blume controla: o servidor de desenvolvimento (confira com `curl -I localhost:4321`), builds estáticos via o arquivo `_headers` emitido (Netlify e Cloudflare) e builds de servidor na Vercel via as regras de roteamento do deploy.
+
+Nem todo agente entra pela raiz, no entanto — um que siga um resultado de busca ou um link compartilhado cai numa página profunda e nunca vê o cabeçalho da página inicial. Por isso, toda página renderizada também carrega os mesmos links de descoberta no seu `<head>` HTML, usando as mesmas relações registradas na IANA:
+
+```html
+<link
+  rel="describedby"
+  href="/agent-readability.json"
+  type="application/json"
+/>
+<link rel="describedby" href="/llms.txt" type="text/plain" />
+<link rel="alternate" href="/docs/example.md" type="text/markdown" />
+```
+
+Aqui o link `alternate` aponta para o [espelho em Markdown bruto](/docs/discoverability/markdown) _daquela página em si_, para que o agente possa pular direto do HTML em que caiu para a versão eficiente em tokens. Como os links do head viajam junto com o HTML pré-renderizado, eles também funcionam em hosts que ignoram `_headers` e não conseguem enviar cabeçalhos de resposta personalizados (GitHub Pages, S3) — não importa em qual página o agente entre.
+
+## Catálogo de APIs
+
+Quando o site publica APIs, o Blume gera um catálogo de APIs da [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) em `/.well-known/api-catalog` — um [linkset](https://www.rfc-editor.org/rfc/rfc9264) que permite aos agentes enumerar suas APIs a partir apenas do domínio, servido com seu media type registrado `application/linkset+json` em todas as superfícies de build. Não há nada para configurar: o catálogo é derivado do que já está no `blume.config.ts`. Cada [referência OpenAPI ou AsyncAPI](/docs/advanced/api-reference) vira uma entrada ancorada na sua rota de docs renderizada, com `service-doc` apontando para essa documentação e `service-desc` para a spec quando ela está em uma URL acessível; a própria [API JSON](/docs/discoverability/json-api) do site vira uma entrada descrita por seu `/openapi.json`; e o [servidor MCP](/docs/discoverability/mcp) vira uma entrada com seu documento de descoberta como descrição do serviço:
+
+```json .well-known/api-catalog
+{
+  "linkset": [
+    {
+      "anchor": "https://docs.example.com/reference",
+      "service-doc": [
+        { "href": "https://docs.example.com/reference", "type": "text/html" }
+      ],
+      "service-desc": [{ "href": "https://api.example.com/openapi.json" }]
+    },
+    {
+      "anchor": "https://docs.example.com/api/docs",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
+    },
+    {
+      "anchor": "https://docs.example.com/mcp",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/.well-known/mcp.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
+    }
+  ]
+}
+```
+
+Um site sem referências de API, sem servidor MCP e com a [API JSON](/docs/discoverability/json-api) desligada não emite catálogo algum — não haveria nada nele. Como em todo lugar, um arquivo `public/.well-known/api-catalog` que você mesmo publique vence o gerado.
+
+## WebMCP
+
+O [WebMCP](https://webmachinelearning.github.io/webmcp/) é uma API de navegador emergente que permite a uma página registrar ferramentas diretamente com um navegador agêntico — sem necessidade de conexão a um servidor separado. Toda página do Blume registra a superfície somente-leitura da documentação no model context da página: `search_docs` (busca no site), `get_page` (o [Markdown bruto](/docs/discoverability/markdown) de uma página) e `list_pages` (o índice do [`llms.txt`](/docs/discoverability/llms-txt)). O script é minúsculo, não carrega nenhuma maquinaria de busca até que uma ferramenta seja de fato chamada, e vira um no-op silencioso em todo navegador sem a API — o que hoje significa todos, fora o [preview inicial do Chrome](https://developer.chrome.com/blog/webmcp-epp). Ele se registra em qualquer superfície que a spec (ainda em fluxo) exponha (`navigator.modelContext` ou `document.modelContext`), via `provideContext` ou `registerTool` por ferramenta.
+
+Vem ligado por padrão; defina `webmcp: false` para desativar:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  webmcp: false,
+}
+```
+
+## Descoberta de skills
+
+Se o seu projeto publica [agent skills](https://agentskills.io) — [o próprio repositório do Blume publica](/docs/advanced/skills) —, aponte `ai.skills` para o diretório que as contém, e o build as publica para descoberta conforme a [RFC de Agent Skills Discovery](https://github.com/cloudflare/agent-skills-discovery-rfc):
+
+```ts blume.config.ts lineNumbers
+ai: {
+  skills: "./skills",
+}
+```
+
+O caminho é resolvido a partir da raiz do seu projeto, e cada subdiretório com um `SKILL.md` vira uma skill publicada. Uma skill que é apenas um `SKILL.md` solitário é copiada literalmente para `/.well-known/agent-skills/<name>/SKILL.md` (`type: "skill-md"`); uma skill com recursos de apoio (`scripts/`, `references/`, `assets/`) é empacotada em um `.tar.gz` determinístico (`type: "archive"`) para que suas referências relativas resolvam após a extração, com os bits de execução dos scripts preservados. O índice de descoberta em `/.well-known/agent-skills/index.json` traz o `$schema` v0.2.0 e, por skill, seu nome, tipo, descrição (do frontmatter do `SKILL.md`), URL do artefato e o digest SHA-256 que os clientes usam para verificar os downloads.
+
+Skills com `name`/`description` ausentes ou inválidos segundo a spec são ignoradas com um aviso de build, em vez de publicadas quebradas, e um `public/.well-known/agent-skills/index.json` que você mesmo publique assume o controle de toda a superfície. As skills publicadas também são listadas no [`llms.txt`](/docs/discoverability/llms-txt#generated-sections).
+
+## Descoberta via DNS (DNS-AID)
+
+O [DNS for AI Discovery](https://datatracker.ietf.org/doc/draft-mozleywilliams-dnsop-dnsaid/) é um draft emergente da IETF que permite aos agentes descobrir a superfície de IA de um site antes de fazer uma única requisição HTTP, consultando registros [SVCB/HTTPS](https://www.rfc-editor.org/rfc/rfc9460) em ServiceMode em um ponto de entrada DNS well-known. Registros DNS vivem na sua zona, não no build, então essa é a única superfície de descoberta que o Blume não pode publicar por você — em vez disso, adicione um registro no seu provedor de DNS:
+
+```txt
+_index._agents.docs.example.com. 3600 IN HTTPS 1 docs.example.com. alpn=h2
+```
+
+Use o tipo de registro `HTTPS` se o seu provedor oferecer (o Vercel DNS oferece; ele não suporta o tipo `SVCB` puro), ou um registro `SVCB` em ServiceMode com os parâmetros `alpn` e `port` caso contrário. O draft também recomenda assinar a zona com DNSSEC para que resolvedores validadores retornem respostas autenticadas — provedores como a Cloudflare habilitam isso com um clique, enquanto alguns (incluindo o Vercel DNS) simplesmente não suportam.
+
+O `blume audit --url <origin>` verifica isso por você: quando [`deployment.site`](/docs/deployment) está definido, a camada de rede consulta o ponto de entrada via DNS-over-HTTPS e informa o registro exato a publicar caso não exista nenhum, além de dizer se as respostas são autenticadas por DNSSEC. Defina `BLUME_DOH_URL` para apontar a consulta ao seu próprio resolvedor se a sua rede bloquear os públicos (Google, Cloudflare).
+
+## Web Bot Auth
+
+O [Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) funciona na direção oposta: não se trata de agentes lendo a sua documentação, mas de **os agentes da sua organização se identificarem** ao fazer requisições em outros lugares. Seus agentes assinam as requisições com [HTTP Message Signatures](https://www.rfc-editor.org/rfc/rfc9421), e os sites receptores as verificam contra um diretório de chaves públicas publicado no seu domínio. Se a sua organização opera agentes e o seu site Blume vive no domínio com que eles se identificam, publique as chaves públicas deles:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  webBotAuth: {
+    keys: [{ kty: "OKP", crv: "Ed25519", x: "JrQLj5P_89iXES9-vFgrIy29c…" }],
+  },
+}
+```
+
+O Blume então serve o JWKS em `/.well-known/http-message-signatures-directory` com seu media type registrado em todas as superfícies de build. O diretório é público por definição, então a configuração só admite chaves públicas — um JWK contendo material privado (`d`, `p`, `q`, …) falha na validação com um erro em vez de publicar uma credencial vazada. Gere um par Ed25519 com:
+
+```bash
+node -e 'const { generateKeyPairSync } = require("node:crypto"); const { publicKey, privateKey } = generateKeyPairSync("ed25519"); console.log("public: ", JSON.stringify(publicKey.export({ format: "jwk" }))); console.log("private:", JSON.stringify(privateKey.export({ format: "jwk" })))'
+```
+
+O JWK público vai na configuração acima; o privado vai onde quer que o seu agente de assinatura rode (um gerenciador de segredos, nunca o repositório). Se a sua organização não opera agentes, pule isso — um diretório vazio não anuncia nada que valha a pena verificar.
+
+Como o `blume.config.ts` é executado em tempo de build, a chave não precisa ficar hardcoded — carregue-a de uma variável de ambiente de build para manter a configuração livre de blobs de chave e rotacionar sem um commit:
+
+```ts blume.config.ts lineNumbers
+const webBotAuthKey = process.env.WEB_BOT_AUTH_PUBLIC_JWK;
+
+export default defineConfig({
+  ai: {
+    webBotAuth: {
+      keys: webBotAuthKey ? [JSON.parse(webBotAuthKey)] : [],
+    },
+  },
+});
+```
+
+Ambientes sem a variável não publicam diretório algum, e uma chave carregada dessa forma é validada exatamente como uma inline — incluindo a checagem de material privado. (A chave pública não é um segredo, então commitá-la inline é igualmente válido; a variável de ambiente é uma escolha de ergonomia, não de segurança.)

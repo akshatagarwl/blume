@@ -1,0 +1,180 @@
+---
+title: Ask AI
+description: >-
+  ドキュメントに基づいたページ内アシスタント — 推奨質問、カスタム指示、検索サイズの調整、Vercel AI Gateway から任意の OpenAI 互換エンドポイントまでのバックエンド、そして必要となるサーバー出力について解説します。
+---
+
+読者の質問にページ内チャットパネルで回答するアシスタントを追加します。ストリーミング対応のサーバーエンドポイントと [AI SDK](https://ai-sdk.dev) によって動作します。これはオプトイン方式であり、有効にするまで静的ドキュメントは完全に静的なままです。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "gateway", // default
+    model: "openai/gpt-5.5",
+  },
+}
+```
+
+## 推奨質問
+
+空の状態にいくつかの開始プロンプトを設定できます。それぞれはクリック可能な候補として表示され、クリックするとその質問が送信されます。ラベルの横にはオプションで [Lucide アイコン](/docs/content/components#icon) を表示できます。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    suggestions: [
+      { label: "What is Blume?", icon: "rocket" },
+      { label: "How do I write a docs page?", icon: "file-text" },
+      { label: "How do I configure the theme?", icon: "settings" },
+    ],
+  },
+}
+```
+
+`label` は実際に送信される質問で、`icon` は任意です。`suggestions` を未設定（または空）のままにすると、パネルはシンプルな入力欄だけで開きます。
+
+## カスタム指示
+
+`instructions` で独自のシステムプロンプトのテキストを追加できます。アイデンティティ、言語、トーンなど、アシスタントに意識してほしい内容を自由に指定できます。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    instructions:
+      "You are Bloomy, the Acme docs assistant. Answer in the language the question was asked in, and keep answers under three paragraphs.",
+  },
+}
+```
+
+指定したテキストは組み込みの指示を置き換えるのではなく、**その後に追加**されます。組み込み部分には[グラウンディング](#grounding)の取り決め（取得したページのみに基づいて回答し、それらを Markdown リンクとして引用する）が含まれており、チャットパネルの引用機能はこれに依存しているため、何を追加してもそのまま維持されます。
+
+## グラウンディング
+
+Ask AI は**ドキュメントに基づいて**動作します。質問ごとに最も関連性の高いページを取得し（オンページ検索を支えるものと同じ字句ベースの [Orama](/docs/configuration/search) インデックスを使用）、モデルのシステムプロンプトに挿入します。これにより、回答はモデル自身の知識ではなくコンテンツから生成されます。アシスタントには、取得したページのみに基づいて回答すること、扱われていない内容についてはその旨を伝えること、参照したページを引用することが指示されています。
+
+読者が現在閲覧しているページが最初にコンテキストへ追加され、そのページの言語に検索範囲を絞り込むために使用されます。これにより、ドキュメント内のどこにいても関連性の高い回答が得られます。検索はビルド時に焼き込まれたスナップショットからリクエスト時に実行されるため、[検索](/docs/configuration/search)プロバイダーに関係なく動作し（検索が `none` に設定されている場合でも）、設定は不要です。
+
+グラウンディングは **[Inkeep](#backends)** を除くすべてのバックエンドで有効です。Inkeep はダッシュボードでインデックス化したコンテンツに対して独自の検索を実行します。
+
+## 検索サイズ
+
+質問がどれだけのドキュメントを伴うかは、読者が最初の単語を目にするまでの待ち時間を左右する最大の要因です。モデルは挿入されたすべての文字を読み込んでからトークンを出力するためです。ホスト型のフロンティアモデルではこれは体感できませんが、セルフホストのバックエンドでは支配的な要素になります。`retrieval` でこのサイズを調整します。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    retrieval: {
+      maxResults: 3, // fewer pages retrieved per question
+      excerptChars: 1200, // shorter excerpt from each one
+      contextBudget: 3000, // smaller total injection
+    },
+  },
+}
+```
+
+| オプション      | デフォルト | 説明                                     |
+| --------------- | ---------- | ---------------------------------------- |
+| `maxResults`    | `6`        | 質問ごとに取得するドキュメント数。       |
+| `excerptChars`  | `2000`     | 取得した各ページから保持する文字数。     |
+| `contextBudget` | `10000`    | すべての抜粋を合わせた挿入文字数の合計。 |
+
+この3つは互いに置き換えられるものではありません。`contextBudget` は挿入全体の上限を定め、`excerptChars` は1つの長いページのどこまで深く抜粋するかを決定し（1ページに回答全体が含まれていて抜粋が途中で切れる場合は引き上げてください）、`maxResults` は検索が追加するページ数の上限を定めます。読者が閲覧中のページは取得されたページに加えて挿入されるため、回答は `maxResults` より最大で1ページ多く引用できます。
+
+デフォルト値はホスト型モデルに適しています。自前のハードウェアで提供していて、再現率よりも最初のトークンまでの時間が重要な場合は値を下げてください。いずれの場合も回答はドキュメントに基づいたままであり、アシスタントは扱われていない内容について推測で埋めるのではなく、その旨を伝えるよう指示されています。
+
+## 外部エンドポイント
+
+すでに AI 用の API バックエンドをお持ちですか？パネルをそこに向けることで、ドキュメントのビルドを静的なまま維持できます。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    endpoint: "https://api.example.com/v1/docs/ask",
+  },
+}
+```
+
+Blume は組み込みルートと同じ `POST` ボディを送信します。
+
+```json
+{
+  "messages": [{ "role": "user", "content": "How do I deploy?" }],
+  "page": { "path": "/deployment" }
+}
+```
+
+ボディがプレーンな UTF-8 テキストストリームである成功レスポンスを返してください。エンドポイントが別のオリジンにある場合は、CORS でドキュメントのオリジンを許可してください。`OPTIONS` と `POST` を受け付け、`content-type` リクエストヘッダーを許可し、プリフライトとストリーミングレスポンスの両方で CORS ヘッダーを返します。`endpoint` を設定すると、Blume はチャット UI のみを生成し、サーバールート、グラウンディング用スナップショット、プロバイダーの依存関係、プロバイダーシークレットの警告は生成しません。検索、認証、レート制限、モデルへのアクセス、引用はすべてバックエンド側の責任となります。
+
+## サーバー出力が必要です
+
+Blume の組み込み Ask AI バックエンドはサーバールート（`POST /api/ask`）であるため、静的ビルドでは動作しません。サーバー出力に切り替えて、アダプターを選択してください。
+
+```ts blume.config.ts lineNumbers
+deployment: {
+  output: "server",
+  adapter: "vercel",
+}
+```
+
+Ask AI が有効で外部 `endpoint` が設定されていない静的ビルドは、`deployment.output` を `server` に設定するよう促すメッセージとともに即座に失敗します。アダプターについては [デプロイ](/docs/deployment) を参照してください。
+
+## バックエンド
+
+デフォルトでは、Ask AI は **Vercel AI Gateway** を経由します。`model` は `provider/model` 形式の文字列なので、これを変更するだけでモデルを切り替えられ（`openai/gpt-5.5`、`anthropic/claude-sonnet-4-5` など）、プロバイダー SDK をインストールする必要はありません。ゲートウェイは環境から `AI_GATEWAY_API_KEY` を読み取り、Vercel にデプロイする際は自動的に接続されます。
+
+Ask AI を別の場所に向けるには `provider` を設定します。各バックエンドは環境変数から API キーを読み取り、プロジェクトにインストールしたプロバイダー SDK を通じてストリーミングします。インストールが必要なのは実際に使用するものだけです。
+
+| `provider` | `model` | API キーの環境変数 | インストールする SDK |
+| --- | --- | --- | --- |
+| `gateway`（デフォルト） | AI Gateway 経由の `provider/model` 形式の文字列 | `AI_GATEWAY_API_KEY` | 不要 — Blume に同梱 |
+| `openrouter` | 任意の [OpenRouter](https://openrouter.ai) モデル | `OPENROUTER_API_KEY` | `@openrouter/ai-sdk-provider` |
+| `llmgateway` | 任意の [LLMGateway](https://llmgateway.io) モデル | `LLMGATEWAY_API_KEY` | `@ai-sdk/openai-compatible` |
+| `inkeep` | [Inkeep](https://inkeep.com) の QA モデル | `INKEEP_API_KEY` | `@ai-sdk/openai-compatible` |
+| `openai-compatible` | エンドポイントが提供するもの | `apiKeyEnv` で設定 | `@ai-sdk/openai-compatible` |
+
+これらの SDK はオプションのピア依存関係なので、バックエンドに必要なものをプロジェクトに追加してください（例: `npm install @openrouter/ai-sdk-provider`）。不足している場合は、Vite がインポートの解決に失敗する前に、ビルドが正確なパッケージ名を示して警告します。
+
+たとえば、OpenRouter を使用するには次のようにします。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "openrouter",
+    model: "anthropic/claude-sonnet-4-5",
+  },
+}
+```
+
+OpenAI 互換のエンドポイントであれば `openai-compatible` を通じて動作します。`baseUrl` とキーを保持する環境変数を指定してください。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "openai-compatible",
+    baseUrl: "https://my-gateway.example.com/v1",
+    apiKeyEnv: "MY_GATEWAY_API_KEY",
+    model: "gpt-4o",
+  },
+}
+```
+
+いずれのバックエンドでも `apiKeyEnv`（および名前付きプロバイダーの場合は `baseUrl`）を設定すれば、別の環境変数やプロキシを指定できます。
+
+:::note
+**Inkeep** は Inkeep ダッシュボードでインデックス化したコンテンツから回答し、独自の検索を実行するため、Blume はグラウンディングを適用しません。それ以外のすべてのバックエンドは、このサイトのページに[グラウンディング](#grounding)されます。
+:::
+
+キーは `process.env` で読み取られ、これは Node、Vercel、Netlify の各アダプターに対応しています。Cloudflare では、プラットフォームの[ランタイムバインディング](https://docs.astro.build/en/guides/integrations-guide/cloudflare/#environment-variables-and-secrets)を通じてキーを公開してください。Ask AI を有効にすると、ページ内アイランドのために React も有効になります。詳細は[カスタマイズ](/docs/configuration/customization#interactive-islands)を参照してください。
+
+## レート制限
+
+`POST /api/ask` エンドポイントは**認証されていません**。ページ内アシスタントから呼び出せる必要があるため、これは必然です。Blume は各リクエストを検証し（不正なボディを拒否し、メッセージ数を 1〜40 に制限し、`user`/`assistant` ロールのみを受け付けることで、呼び出し元が独自のシステムプロンプトを注入してこのルートを汎用 LLM プロキシとして転用できないようにします）、1回の呼び出しでモデルに対して消費できる量を制限しますが、同じエンドポイントが繰り返し呼び出されるのを防ぐことはできません。コストの悪用が懸念される場合は、ルートをレート制限の背後に置いてください。ホスティング事業者（Vercel など）のエッジレート制限、ミドルウェア、あるいはモデルプロバイダーのキーごとの利用上限などが利用できます。
+
+このエンドポイントは、サイトの機械可読な情報とともに[エージェント可読性マニフェスト](/docs/discoverability/agent-discovery#agent-readability)で公開されます。

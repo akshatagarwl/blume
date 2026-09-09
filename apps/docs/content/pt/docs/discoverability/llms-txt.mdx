@@ -1,0 +1,69 @@
+---
+title: llms.txt
+description: >-
+  O índice llms.txt e o corpus llms-full.txt que o Blume gera para agentes de programação e assistentes de chat, o bloco de detalhes que informa a eles quando usar seu produto, e como excluir uma página.
+---
+
+O Blume emite versões legíveis por máquina da sua documentação que agentes de programação e assistentes de chat conseguem consumir. Isso vem ativado por padrão; defina `llmsTxt: false` para desligar:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  llmsTxt: false,
+}
+```
+
+Enquanto estiver ativado, o `blume build` grava dois arquivos na raiz do seu site:
+
+- **`/llms.txt`** — um índice compacto: o título e a descrição do seu site, seguidos de uma lista com links de todas as páginas e seus resumos, organizada em seções que espelham sua barra lateral — pastas e grupos viram títulos, então o agente enxerga a estrutura da documentação, e não um bloco único e achatado.
+- **`/llms-full.txt`** — o corpus inteiro: o corpo completo em Markdown de cada página, com sua URL de origem, em um único arquivo.
+
+Páginas em rascunho são excluídas. Defina [`deployment.site`](/docs/deployment) para que os links e as URLs de origem resolvam para endereços absolutos.
+
+## Opções
+
+O `llmsTxt` também aceita um formato de objeto com ajustes sobre o que os arquivos incluem. Se a sua [referência de API](/docs/advanced/api-reference) documenta uma especificação de exemplo ou de placeholder, defina `openapi: false` para manter as páginas geradas por ela fora dos dois arquivos:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  llmsTxt: {
+    enabled: true, // default
+    openapi: false, // exclude generated API reference pages
+  },
+}
+```
+
+O formato de objeto também aceita `details`: Markdown posicionado logo após o título e o resumo no `llms.txt`, antes das seções de páginas — o bloco livre de "details" da [especificação llms.txt](https://llmstxt.org). É o lugar para dizer aos agentes _quando_ recorrer ao seu produto e como acioná-lo, algo que os scanners de prontidão procuram explicitamente; um comando de instalação e o nome do pacote também cabem aqui:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  llmsTxt: {
+    details: [
+      "## When to use Acme",
+      "",
+      "Reach for Acme when a project needs hosted feature flags. Install the CLI with `npm install -g acme`; the API reference below covers every endpoint.",
+    ].join("\n"),
+  },
+}
+```
+
+## Seções geradas
+
+O `llms.txt` termina com duas seções geradas que não precisam de configuração. **Agent skills** lista cada skill publicada através de [`ai.skills`](/docs/discoverability/agent-discovery#skills-discovery) com sua descrição (onde a skill diz quando deve ser usada). **Agent resources** cria links para todos os artefatos legíveis por máquina que o build emite — `llms-full.txt`, o espelho de [Markdown bruto](/docs/discoverability/markdown) por página, o [servidor MCP](/docs/discoverability/mcp) e seu documento de descoberta, o índice de skills, o [catálogo de API](/docs/discoverability/agent-discovery#api-catalog), o [`agent-readability.json`](/docs/discoverability/agent-discovery#agent-readability) e o [sitemap](/docs/discoverability/sitemap-and-robots#sitemap) — cada um apenas quando existe, então um agente que não lê nada além do `llms.txt` ainda encontra toda a superfície.
+
+## Excluindo uma página
+
+Para manter uma página individual fora dos dois arquivos, defina `ai.exclude` no frontmatter dela:
+
+```mdx
+---
+title: Internal notes
+ai:
+  exclude: true
+---
+```
+
+A página continua sendo renderizada, permanece na busca e mantém seu lugar no sitemap — só os arquivos `llms.txt` a ignoram.
+
+## Usando os seus próprios
+
+Para assumir controle total de qualquer um dos arquivos, adicione seu próprio `llms.txt` ou `llms-full.txt` na pasta `public/`. Assim como um favicon personalizado, ele é detectado automaticamente e é publicado no lugar do arquivo gerado — se você sobrescrever um, o Blume ainda gera o outro.

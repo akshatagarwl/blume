@@ -1,0 +1,98 @@
+---
+title: साइटमैप और robots
+description: >-
+  Blume क्रॉलरों के लिए जो sitemap.xml और robots.txt लिखता है, और वह Content-Signal पंक्ति जो AI क्रॉलरों को बताती है कि वे आपके दस्तावेज़ों का उपयोग किस प्रकार कर सकते हैं।
+---
+
+खोज क्रॉलर और AI क्रॉलर, दोनों ही आपकी साइट की जड़ में मौजूद इन्हीं दो फ़ाइलों से शुरुआत करते हैं। Blume हर बिल्ड पर दोनों लिखता है, और `robots.txt` में वे कंटेंट-उपयोग संकेत होते हैं जिन्हें AI क्रॉलर खोजते हैं, इसलिए यही वह जगह है जहाँ खोज-योग्यता का खोज पक्ष और एजेंट पक्ष आपस में मिलते हैं।
+
+## साइटमैप
+
+Blume बिल्ड समय पर हर इंडेक्स-योग्य पृष्ठ का एक `sitemap.xml` लिखता है। इसके लिए एक निरपेक्ष [`deployment.site`](/docs/deployment) आवश्यक है और यह ड्राफ़्ट, छिपे हुए, और [`noindex`](/docs/discoverability/metadata#per-page-overrides) पृष्ठों को छोड़कर हर पृष्ठ को सूचीबद्ध करता है। किसी [संस्करणीकृत](/docs/content/versioning) साइट पर, वे संग्रहीत पृष्ठ भी छोड़ दिए जाते हैं जिनका canonical उनके लाइव समतुल्य की ओर संकेत करता है — इंडेक्स करने योग्य पृष्ठ लाइव पृष्ठ ही है। डिफ़ॉल्ट रूप से चालू:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  sitemap: true,
+}
+```
+
+नियंत्रण अपने हाथ में लेने के लिए अपनी स्वयं की `public/sitemap.xml` भेजें — Blume `public/` में रखी गई किसी फ़ाइल को कभी अधिलेखित नहीं करता।
+
+## Robots
+
+Blume एक ऐसी `robots.txt` लिखता है जो सभी क्रॉलरों को अनुमति देती है, आपके [कंटेंट संकेत](#content-signals) घोषित करती है, और साइटमैप उपलब्ध होने पर उसकी ओर संकेत करती हुई एक `Sitemap:` पंक्ति जोड़ती है। डिफ़ॉल्ट रूप से चालू:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  robots: true,
+}
+```
+
+```txt robots.txt
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
+
+Sitemap: https://docs.example.com/sitemap.xml
+```
+
+### कंटेंट संकेत
+
+`Content-Signal` पंक्ति — उभरती हुई कंटेंट-उपयोग परिपाटी — यह घोषित करती है कि AI क्रॉलर आपके दस्तावेज़ों का पुनः उपयोग किस प्रकार कर सकते हैं। Blume इसे **डिफ़ॉल्ट रूप से चालू रखते हुए, हर संकेत को `yes` पर सेट करके** उत्सर्जित करता है, जो इसके इस दृष्टिकोण के अनुरूप है कि दस्तावेज़ मनुष्यों और एजेंटों, दोनों के लिए समान रूप से खुले हैं:
+
+- `search` — पारंपरिक और AI खोज इंडेक्सिंग
+- `aiInput` — उत्तर देने के समय ग्राउंडिंग / RAG
+- `aiTrain` — मॉडल प्रशिक्षण
+
+किसी भी संकेत को `false` पर सेट करके प्रतिबंधित करें; जिन्हें आप छोड़ देते हैं वे `yes` ही बने रहते हैं:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  contentSignals: {
+    aiTrain: false, // opt out of training, keep search + grounding
+  },
+}
+```
+
+```txt robots.txt
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+Allow: /
+```
+
+घोषणा को पूरी तरह हटाने के लिए `contentSignals: false` सेट करें:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  contentSignals: false,
+}
+```
+
+<TypeTable
+  type={{
+    "seo.contentSignals": {
+      type: "boolean | object",
+      description:
+        "Content-Signal घोषणा। true या छोड़ देने पर सभी संकेत yes के रूप में उत्सर्जित होते हैं; false पंक्ति हटा देता है; कोई ऑब्जेक्ट संकेतों को अलग-अलग सेट करता है।",
+    },
+    "contentSignals.search": {
+      type: "boolean",
+      description:
+        "खोज इंडेक्सिंग (search) के लिए उपयोग की अनुमति दें। डिफ़ॉल्ट true।",
+    },
+    "contentSignals.aiInput": {
+      type: "boolean",
+      description:
+        "उत्तर देने के समय AI ग्राउंडिंग / RAG (ai-input) के लिए उपयोग की अनुमति दें। डिफ़ॉल्ट true।",
+    },
+    "contentSignals.aiTrain": {
+      type: "boolean",
+      description:
+        "AI मॉडल प्रशिक्षण (ai-train) के लिए उपयोग की अनुमति दें। डिफ़ॉल्ट true।",
+    },
+  }}
+/>
+
+कंटेंट संकेत एक वरीयता व्यक्त करते हैं, पहुँच नियंत्रण नहीं: वे सुव्यवहृत क्रॉलरों को बताते हैं कि आप अपने कंटेंट का उपयोग किस प्रकार चाहते हैं, और उनका सम्मान करना क्रॉलर पर निर्भर है। यही नीति [एजेंट पठनीयता मैनिफ़ेस्ट](/docs/discoverability/agent-discovery#agent-readability) में `contentUsage` के रूप में प्रतिबिंबित होती है, ताकि जो एजेंट `robots.txt` कभी नहीं पढ़ता, वह भी इसे देख सके।
+
+नियंत्रण अपने हाथ में लेने के लिए अपनी स्वयं की `public/robots.txt` भेजें।

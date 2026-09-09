@@ -1,0 +1,83 @@
+---
+title: मेटाडेटा
+description: >-
+  वे head टैग जो प्रत्येक पृष्ठ रेंडर करता है — title, description, canonical, Open Graph और X कार्ड टैग — और उन्हें frontmatter से प्रति पृष्ठ कैसे ओवरराइड करें।
+---
+
+प्रत्येक पृष्ठ आपके कॉन्फ़िग और frontmatter से मानक `<head>` टैग रेंडर करता है — किसी कॉन्फ़िगरेशन की आवश्यकता नहीं। जहाँ किसी मान को समायोजित किया जा सकता है, वह `blume.config.ts` में `seo` कुंजी के अंतर्गत या किसी पृष्ठ के frontmatter में `seo` के अंतर्गत रहता है।
+
+- `<title>` — पृष्ठ का शीर्षक और साथ में आपकी साइट का `title`।
+- `<meta name="description">` और `og:description` — पृष्ठ का `description`, जो साइट के `description` पर वापस चला जाता है।
+- `og:title` और `og:site_name` — पृष्ठ का शीर्षक और आपकी साइट का `title`।
+- `<link rel="canonical">` और `og:url` — पृष्ठ का पूर्ण URL (जब [`deployment.site`](/docs/deployment) सेट हो)।
+- `og:type` — ब्लॉग पोस्ट और चेंजलॉग प्रविष्टियों पर `article`, अन्यत्र `website`। लेख पृष्ठ पृष्ठ के `date` और अंतिम-संशोधित टाइमस्टैम्प से `article:published_time` और `article:modified_time` भी उत्सर्जित करते हैं।
+- `og:image` — पृष्ठ के लिए [OG छवि](/docs/discoverability/open-graph)। एक जनित कार्ड अपने `og:image:width`, `og:image:height`, `og:image:type`, और `og:image:alt` की घोषणा भी करता है, ताकि क्रॉलर पहले उसे प्राप्त किए बिना कार्ड का लेआउट तैयार कर सके; आपके द्वारा स्वयं दी गई `seo.image` इनमें से कोई भी घोषित नहीं करती, क्योंकि उसका आकार और प्रारूप अज्ञात होता है।
+- `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` — X कार्ड। छवि वाले पृष्ठों को चौड़ा `summary_large_image` संस्करण मिलता है; छवि रहित पृष्ठों को फिर भी सघन `summary` कार्ड मिलता है, न कि वे केवल एक सादे लिंक के रूप में रेंडर होते हैं।
+
+## X श्रेय
+
+X कार्ड की बाकी सारी जानकारी `og:*` टैग से पढ़ता है, इसलिए केवल वही मान हैं जिनका वह अनुमान नहीं लगा सकता — वे खाते जिन्हें श्रेय देना है। उन्हें `seo.x` के अंतर्गत सेट करें और Blume `twitter:site` (आपकी साइट का खाता) तथा `twitter:creator` (लेखक का खाता) उत्सर्जित करता है। `@` वैकल्पिक है — `acme` और `@acme` दोनों काम करते हैं।
+
+```ts blume.config.ts lineNumbers
+seo: {
+  x: { handle: "@acme", creator: "@jane" },
+}
+```
+
+कोई पृष्ठ अपना स्वयं का लेखक घोषित कर सकता है, जो अतिथि पोस्ट के लिए उपयुक्त है:
+
+```yaml lineNumbers
+---
+title: How we shipped it
+seo:
+  x:
+    creator: "@guestauthor"
+---
+```
+
+## प्रति-पृष्ठ ओवरराइड
+
+`seo` frontmatter के साथ अन्य किसी भी टैग को प्रति पृष्ठ ओवरराइड करें:
+
+```yaml lineNumbers
+---
+title: Pricing
+description: Plans and pricing for every team size.
+seo:
+  title: Pricing — Acme
+  canonical: https://acme.com/pricing
+  noindex: false
+---
+```
+
+<TypeTable
+  type={{
+    "seo.title": {
+      type: "string",
+      description: "इस पृष्ठ के लिए <title> और og:title को ओवरराइड करें।",
+    },
+    "seo.description": {
+      type: "string",
+      description: "meta + og:description को ओवरराइड करें।",
+    },
+    "seo.image": {
+      type: "string",
+      description: "कस्टम सोशल छवि (Open Graph छवियाँ देखें)।",
+    },
+    "seo.canonical": {
+      type: "string",
+      description: "canonical URL को ओवरराइड करें।",
+    },
+    "seo.noindex": {
+      type: "boolean",
+      description: "robots noindex उत्सर्जित करें और संरचित डेटा छोड़ दें।",
+    },
+    "seo.x.creator": {
+      type: "string",
+      description:
+        "इस पृष्ठ का श्रेय किसी X खाते को दें (twitter:creator), जो आपके कॉन्फ़िग की seo.x.creator को ओवरराइड करता है।",
+    },
+  }}
+/>
+
+एक `noindex` पृष्ठ [साइटमैप](/docs/discoverability/sitemap-and-robots#sitemap) से भी बाहर हो जाता है और [संरचित डेटा](/docs/discoverability/structured-data) को छोड़ देता है।

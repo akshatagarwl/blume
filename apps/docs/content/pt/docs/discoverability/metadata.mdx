@@ -1,0 +1,83 @@
+---
+title: Metadados
+description: >-
+  As tags de head que toda página renderiza — title, description, canonical, Open Graph e tags de card do X — e como sobrescrevê-las por página a partir do frontmatter.
+---
+
+Toda página renderiza as tags `<head>` padrão a partir da sua config e do frontmatter — sem nenhuma configuração necessária. Quando um valor pode ser ajustado, ele fica sob a chave `seo` no `blume.config.ts` ou sob `seo` no frontmatter de uma página.
+
+- `<title>` — o título da página mais o `title` do seu site.
+- `<meta name="description">` e `og:description` — a `description` da página, com fallback para a `description` do site.
+- `og:title` e `og:site_name` — o título da página e o `title` do seu site.
+- `<link rel="canonical">` e `og:url` — a URL absoluta da página (quando [`deployment.site`](/docs/deployment) está definido).
+- `og:type` — `article` em posts de blog e entradas de changelog, `website` no restante. Páginas de artigo também emitem `article:published_time` e `article:modified_time` a partir da `date` da página e do timestamp de última modificação.
+- `og:image` — a [imagem OG](/docs/discoverability/open-graph) da página. Um card gerado também declara seus `og:image:width`, `og:image:height`, `og:image:type` e `og:image:alt`, para que um crawler consiga montar o layout do card sem precisar buscá-lo antes; um `seo.image` que você mesmo fornece não declara nenhum desses, já que seu tamanho e formato são desconhecidos.
+- `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` — o card do X. Páginas com imagem recebem a variante larga `summary_large_image`; páginas sem imagem ainda recebem o card compacto `summary` em vez de aparecerem como um link simples.
+
+## Atribuição no X
+
+O X lê todo o resto do card a partir das tags `og:*`, então os únicos valores que ele não consegue inferir são as contas a creditar. Defina-as sob `seo.x` e o Blume emite `twitter:site` (a conta do seu site) e `twitter:creator` (a do autor). O `@` é opcional — `acme` e `@acme` funcionam do mesmo jeito.
+
+```ts blume.config.ts lineNumbers
+seo: {
+  x: { handle: "@acme", creator: "@jane" },
+}
+```
+
+Uma página pode reivindicar seu próprio autor, que é o que você quer para um post convidado:
+
+```yaml lineNumbers
+---
+title: How we shipped it
+seo:
+  x:
+    creator: "@guestauthor"
+---
+```
+
+## Sobrescritas por página
+
+Sobrescreva qualquer uma das outras tags por página com o frontmatter `seo`:
+
+```yaml lineNumbers
+---
+title: Pricing
+description: Plans and pricing for every team size.
+seo:
+  title: Pricing — Acme
+  canonical: https://acme.com/pricing
+  noindex: false
+---
+```
+
+<TypeTable
+  type={{
+    "seo.title": {
+      type: "string",
+      description: "Override the <title> and og:title for this page.",
+    },
+    "seo.description": {
+      type: "string",
+      description: "Override the meta + og:description.",
+    },
+    "seo.image": {
+      type: "string",
+      description: "Custom social image (see Open Graph images).",
+    },
+    "seo.canonical": {
+      type: "string",
+      description: "Override the canonical URL.",
+    },
+    "seo.noindex": {
+      type: "boolean",
+      description: "Emit robots noindex and skip structured data.",
+    },
+    "seo.x.creator": {
+      type: "string",
+      description:
+        "Credit this page to an X account (twitter:creator), overriding seo.x.creator from your config.",
+    },
+  }}
+/>
+
+Uma página com `noindex` também sai do [sitemap](/docs/discoverability/sitemap-and-robots#sitemap) e pula os [dados estruturados](/docs/discoverability/structured-data).

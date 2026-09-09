@@ -1,0 +1,59 @@
+---
+title: JSON API
+description: >-
+  すべての Blume サイトが提供する読み取り専用の JSON API — ページインデックス、ページごとのドキュメント、ナビゲーション、検索 — と、関数呼び出しフレームワークがそこからツールを構築できるようにする OpenAPI 3.1 記述について解説します。
+---
+
+すべての Blume サイトは、ドキュメントを小さな読み取り専用の **JSON API** としても提供します。これは [MCP サーバー](/docs/discoverability/mcp)のツールの REST 版であり、同じページスナップショットを対象として、MCP ではなく素の HTTP を扱うエージェントや関数呼び出しフレームワーク向けに用意されています。デフォルトで有効で、設定は不要です。
+
+| エンドポイント | 返すもの |
+| --- | --- |
+| `/api/docs/pages.json` | すべてのページと、そのルート、タイトル、説明、コンテンツタイプ、ロケール、ファセット、およびレンダリング形式・Markdown 形式・JSON 形式の URL。 |
+| `/api/docs/pages/{route}.json` | 1 つのページ。インデックスエントリに加えて、エージェント向け Markdown（`get_page` が返すのと同じ本文）。`{route}` は先頭のスラッシュを除いたページルートで、ホームの場合は `index` です。 |
+| `/api/docs/navigation.json` | ナビゲーションツリー — ヘッダータブとサイドバーの階層。 |
+| `/api/docs/search?q=` | 全文検索。`search_docs` と同じ `limit`、`contentTypes`、`locale`、`version`、`filters[key]` によるスコープ指定が可能です。サーバー出力でのみ利用できます。 |
+| `/openapi.json` | 機械可読なサーフェス全体の OpenAPI 3.1 記述。 |
+
+ページインデックス、ページごとのドキュメント、ナビゲーションはプリレンダリングされるため、静的サイトであればどのホストからでもファイルとして配信できます。検索はライブエンドポイントで、[サーバー出力](/docs/deployment#server-rendering)でのみ存在し、そこでは `search_docs` と同じインデックスを実行します。
+
+## エラー
+
+エラーは [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) の problem details（`application/problem+json`）で、安定した `code`、`detail`、そしてエージェントに次の行き先を示す `resolution` ヒントを含みます。存在しないページ、空の検索クエリ、あるいはサーバー出力においてどのエンドポイントも応答しない `/api/…` URL などが対象です。
+
+```json
+{
+  "code": "API_ROUTE_NOT_FOUND",
+  "detail": "No API route exists at /api/nope.",
+  "instance": "/api/nope",
+  "links": [
+    {
+      "href": "https://docs.example.com/openapi.json",
+      "label": "OpenAPI description"
+    },
+    {
+      "href": "https://docs.example.com/api/docs/pages.json",
+      "label": "Page index"
+    }
+  ],
+  "resolution": "Discover the available operations through the OpenAPI description at https://docs.example.com/openapi.json, or list every page at https://docs.example.com/api/docs/pages.json.",
+  "status": 404,
+  "title": "API route not found",
+  "type": "about:blank"
+}
+```
+
+## OpenAPI 記述
+
+`/openapi.json` にある **OpenAPI ドキュメント**は、ビルドごとに設定から生成されるため、デプロイされたサイトが実際に提供するものだけを記述します。一意の `operationId`、型付きパラメータ、レスポンススキーマを備えたすべての JSON エンドポイントに加えて、併せて提供されるテキストサーフェス — [`.md` ミラー](/docs/discoverability/markdown)、[`llms.txt`](/docs/discoverability/llms-txt) と `llms-full.txt`、[`agent-readability.json`](/docs/discoverability/agent-discovery#agent-readability) — そして有効になっている場合は [MCP エンドポイント](/docs/discoverability/mcp)も含まれます。OpenAPI 記述からツールを構築するフレームワークは、MCP クライアントと同じ範囲にアクセスできます。このドキュメントは、[API カタログ](/docs/discoverability/agent-discovery#api-catalog)、[readability マニフェスト](/docs/discoverability/agent-discovery#agent-readability)、ホームページの `Link` ヘッダー（`rel="service-desc"`）、そして `llms.txt` からリンクされています。
+
+これらはいずれも、あなた自身の [API リファレンス](/docs/advanced/api-reference)には影響しません。ドキュメント化された仕様はページとしてレンダリングされ、`/openapi.json` で配信されることはなく、カタログには両方が掲載されます。自分で配置した `public/openapi.json` があれば、そのルートを引き継ぎます（JSON エンドポイントはそのまま残ります）。`/api/…` のキャッチオールは、ドキュメントセクションが `/api` 名前空間から配信される場合（`content/api/overview.md`）や、カスタムページが `/api/` 配下の残りのルートを所有している場合には道を譲るため、それらのページが優先されます。
+
+## 無効にする
+
+すべてを公開しないようにするには、`ai.api` を `false` に設定します。
+
+```ts blume.config.ts lineNumbers
+ai: {
+  api: false,
+}
+```

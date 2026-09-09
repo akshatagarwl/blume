@@ -1,0 +1,114 @@
+---
+title: Imagens Open Graph
+description: >-
+  Cards sociais 1200×630 gerados para cada página — identidade visual, camadas do card, fontes para escritas não latinas e substituições por página.
+---
+
+O Blume pode renderizar um card social de 1200×630 para cada página em tempo de build — sem navegador headless, graças ao [Takumi](https://takumi.kane.tw), então os builds continuam rápidos. Ativado por padrão assim que [`deployment.site`](/docs/deployment) é definido ou detectado automaticamente (a URL de `og:image` precisa ser absoluta para ser útil aos crawlers), e desativado caso contrário. Defina `enabled` para sobrescrever isso em qualquer direção:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: { enabled: true }, // or false to opt out even with a site set
+}
+```
+
+## Aplique sua marca ao card gerado
+
+Defina um SVG local e uma paleta de cores para alinhar o card gerado à sua marca. O logo pode ficar em `public/` ou na raiz do projeto. Omita qualquer valor da paleta para manter o padrão dele.
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    logo: "/logo/og.svg",
+    palette: {
+      accent: "#ff5410",
+      background: "#1d1d1d",
+      foreground: "#fff6f2",
+      muted: "#a6a19f",
+      border: "#323232",
+    },
+  },
+}
+```
+
+Por padrão, cada card é derivado do seu conteúdo e do seu tema — o **título da página** como manchete, a **descrição da página** como subtítulo (o mesmo texto do seu `og:description`, então `seo.description` prevalece sobre `description`), o **título do site** como sobretítulo e o **accent** do seu tema para a marca. As imagens são servidas em `/og/<slug>.png`, espelhando cada rota, e são pré-renderizadas como arquivos estáticos mesmo no modo servidor:
+
+| Rota da página   | URL da imagem           |
+| ---------------- | ----------------------- |
+| `/`              | `/og/index.png`         |
+| `/quickstart`    | `/og/quickstart.png`    |
+| `/guides/deploy` | `/og/guides/deploy.png` |
+
+Sobrescreva o card gerado de qualquer página com `seo.image` — um arquivo em `public/` ou uma URL externa. Ele tem precedência sobre o card gerado e funciona mesmo quando `og` está desativado, então dá para misturar imagens personalizadas com as geradas:
+
+```yaml lineNumbers
+---
+title: Pricing
+seo:
+  image: /og/pricing-custom.png
+---
+```
+
+:::note
+Toda cor da paleta aceita qualquer cor CSS — hex, `oklch(…)`, `rgb(…)` e assim por diante. O accent também aceita um preset nomeado (`blue`, `teal`, …), correspondendo a [`theme.accent`](/docs/configuration/theming#accent). Uma cor que o renderizador não consegue interpretar quebra o build em vez de entregar silenciosamente um card com a cor padrão.
+:::
+
+Emojis no título de uma página ou no título do site são renderizados como glifos do [Twemoji](https://github.com/jdecked/twemoji), buscados em uma CDN enquanto o card é renderizado — então um build cujos títulos contenham emojis precisa de acesso à rede. Cada glifo é buscado uma vez por build, não importa quantas páginas o usem.
+
+## Exiba, oculte ou sobrescreva camadas do card
+
+Além da manchete, o card carrega três camadas opcionais: a **marca** no canto superior esquerdo (seu logo, ou um bloco em accent com a inicial do título do site), o **subtítulo** abaixo da manchete (a `description` da página, ou a `description` do seu site para páginas sem uma) e um **rodapé** com o slug do seu repositório (a partir de `github`) e a URL do site — o host do site de deploy mais [`deployment.base`](/docs/deployment#subpath-deploys), então um site de projeto no GitHub Pages fica `user.github.io/repo`. Sobrescreva qualquer uma delas com uma string sua, ou oculte uma com `false`:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    site: "docs.acme.com", // footer URL text, or false to hide it
+    description: false, // hide the subtitle on every card; a string replaces the site fallback
+    logo: false, // no brand mark at all — not even the initial tile
+  },
+}
+```
+
+## Fontes do card
+
+Por padrão, o card é renderizado com a fonte embutida do Takumi, que cobre apenas glifos latinos — um título em outra escrita (japonês, chinês, coreano, árabe, …) apareceria como tofu, quadradinhos vazios.
+
+**Defina [`theme.fonts`](/docs/configuration/theming#fonts) e o card acompanha.** Quando a sua configuração escolhe as próprias fontes, os cards gerados renderizam automaticamente a manchete na sua fonte de display e a descrição e o rodapé na sua fonte de corpo, então os links compartilhados combinam com o site — incluindo cobertura não latina, sem nada para configurar aqui. (Famílias de provedores que não sejam o Google são ignoradas — o renderizador do card só consegue buscar do Google Fonts —, mas arquivos de fonte locais funcionam.)
+
+Para usar nos cards fontes diferentes das do site, ou para adicionar cobertura de escritas sem mexer no tema, defina `og.fonts` explicitamente — ele sempre prevalece sobre as fontes derivadas do tema:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    fonts: [
+      "Noto Sans JP",
+      { name: "Inter", weight: [400, 700] },
+      { name: "Berkeley Mono", src: "./fonts/BerkeleyMono-Regular.woff2" },
+    ],
+  },
+}
+```
+
+Cada entrada é um nome de família do Google Fonts, um objeto fixando seu `weight` (um número, uma lista ou um intervalo variável como `"100..900"`) e `style` (`"normal"`, `"italic"` ou ambos), ou um arquivo de fonte local — `src` é resolvido a partir da raiz do projeto, com `weight` e `style` opcionais para quando os metadados do próprio arquivo não devem decidir.
+
+As famílias do Google são buscadas no build — então um build que as usa precisa de acesso à rede — e o renderizador só baixa os subconjuntos de glifos que cada título realmente usa. O fallback é por glifo, então adicionar uma família só afeta os glifos que as outras fontes não conseguem desenhar.
+
+Um `og.fonts: []` explícito desativa tudo: os cards mantêm a fonte embutida mesmo com `theme.fonts` definido.
+
+## Títulos de páginas personalizadas
+
+Uma [página `.astro`](/docs/advanced/custom-pages) personalizada não tem frontmatter para ler, então o card gerado dela recebe o título humanizando o último segmento da URL da rota — `/getting-started` vira "Getting Started", mas `/cli` vira "Cli". Nomeie esses cards explicitamente com `og.titles`, indexado por rota (`"/"` endereça a home, cujo card, do contrário, carrega o título do site):
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    titles: {
+      "/cli": "CLI",
+    },
+  },
+}
+```
+
+As entradas se aplicam apenas a páginas personalizadas — o card de uma página de conteúdo sempre tira a manchete do título da página, então retitule essas no frontmatter.
+
+`seo.image` é frontmatter, então cobre apenas conteúdo Markdown e MDX. Para dar a uma [página `.astro`](/docs/advanced/custom-pages) personalizada sua própria imagem social — uma home de marketing ou landing page, e a forma de dar só à home uma imagem de compartilhamento sob medida — passe a prop `ogImage` para o `PageLayout`.

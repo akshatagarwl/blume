@@ -1,0 +1,83 @@
+---
+title: メタデータ
+description: >-
+  すべてのページがレンダリングする head タグ（title、description、canonical、Open Graph、X カードのタグ）と、フロントマターからページごとに上書きする方法。
+---
+
+すべてのページは、設定とフロントマターから標準的な `<head>` タグをレンダリングします — 設定は不要です。値を調整できる場合は、`blume.config.ts` の `seo` キー、またはページのフロントマターの `seo` の下に配置されます。
+
+- `<title>` — ページタイトルとサイトの `title`。
+- `<meta name="description">` と `og:description` — ページの `description`。未設定の場合はサイトの `description` にフォールバックします。
+- `og:title` と `og:site_name` — ページタイトルとサイトの `title`。
+- `<link rel="canonical">` と `og:url` — ページの絶対 URL（[`deployment.site`](/docs/deployment) が設定されている場合）。
+- `og:type` — ブログ記事と変更履歴エントリでは `article`、それ以外では `website`。記事ページでは、ページの `date` と最終更新タイムスタンプから `article:published_time` と `article:modified_time` も出力されます。
+- `og:image` — ページの [OG 画像](/docs/discoverability/open-graph)。生成されたカードは `og:image:width`、`og:image:height`、`og:image:type`、`og:image:alt` も宣言するため、クローラーは画像を取得せずにカードをレイアウトできます。自分で指定した `seo.image` は、サイズとフォーマットが不明なため、これらを一切宣言しません。
+- `twitter:card`、`twitter:title`、`twitter:description`、`twitter:image` — X カード。画像のあるページは横長の `summary_large_image` バリアントになります。画像のないページでも、素のリンクとしてレンダリングされる代わりにコンパクトな `summary` カードが適用されます。
+
+## X のクレジット表記
+
+X はカードのその他すべての値を `og:*` タグから読み取るため、推測できない値はクレジットするアカウントだけです。それらを `seo.x` の下に設定すると、Blume は `twitter:site`（サイトのアカウント）と `twitter:creator`（著者のアカウント）を出力します。`@` は省略可能で、`acme` と `@acme` のどちらでも動作します。
+
+```ts blume.config.ts lineNumbers
+seo: {
+  x: { handle: "@acme", creator: "@jane" },
+}
+```
+
+ページは独自の著者を指定できます。これはゲスト投稿に適しています。
+
+```yaml lineNumbers
+---
+title: How we shipped it
+seo:
+  x:
+    creator: "@guestauthor"
+---
+```
+
+## ページごとの上書き
+
+その他のタグはいずれも、`seo` フロントマターでページごとに上書きできます。
+
+```yaml lineNumbers
+---
+title: Pricing
+description: Plans and pricing for every team size.
+seo:
+  title: Pricing — Acme
+  canonical: https://acme.com/pricing
+  noindex: false
+---
+```
+
+<TypeTable
+  type={{
+    "seo.title": {
+      type: "string",
+      description: "このページの <title> と og:title を上書きします。",
+    },
+    "seo.description": {
+      type: "string",
+      description: "meta と og:description を上書きします。",
+    },
+    "seo.image": {
+      type: "string",
+      description: "カスタムのソーシャル画像（Open Graph 画像を参照）。",
+    },
+    "seo.canonical": {
+      type: "string",
+      description: "canonical URL を上書きします。",
+    },
+    "seo.noindex": {
+      type: "boolean",
+      description: "robots noindex を出力し、構造化データをスキップします。",
+    },
+    "seo.x.creator": {
+      type: "string",
+      description:
+        "このページを X アカウント（twitter:creator）にクレジットし、設定の seo.x.creator を上書きします。",
+    },
+  }}
+/>
+
+`noindex` のページは [サイトマップ](/docs/discoverability/sitemap-and-robots#sitemap) からも除外され、[構造化データ](/docs/discoverability/structured-data) もスキップされます。

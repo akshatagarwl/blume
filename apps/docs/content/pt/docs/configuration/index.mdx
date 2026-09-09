@@ -66,7 +66,7 @@ export default defineConfig({
     },
   },
 
-  // AI — see the AI guide
+  // AI — llms.txt, MCP; see the Discoverability section
   ai: {
     llmsTxt: true,
     // MCP server (needs server output)
@@ -76,7 +76,7 @@ export default defineConfig({
     },
   },
 
-  // SEO — OG images, feeds, sitemap, structured data; see the SEO guide
+  // SEO — OG images, feeds, sitemap, structured data; see the Discoverability section
   seo: {
     og: { enabled: true },
     rss: { enabled: true, types: ["blog", "changelog"] },
@@ -364,9 +364,9 @@ dateFormat: { year: "numeric", month: "2-digit", day: "2-digit" },
 | `timeZone` | Fuso horário IANA. Por padrão é `UTC`, para que uma data seja lida da mesma forma independentemente de onde o site é buildado. |
 | `calendar`, `numberingSystem` | Sistema de calendário (p. ex. `"japanese"`) e sistema de numeração (p. ex. `"arab"`). |
 
-## SEO
+## SEO e IA
 
-Imagens Open Graph, feeds RSS e dados estruturados JSON-LD, agrupados em `seo`. Consulte o [guia de SEO](/docs/discoverability) para metadados, substituições no frontmatter e a referência completa.
+Metadados, imagens Open Graph, feeds RSS, JSON-LD, o sitemap e o `robots.txt` ficam em `seo`; o `llms.txt`, o Markdown bruto, a API JSON e o servidor MCP ficam em `ai`. Os dois são abordados página a página na seção [Descoberta](/docs/discoverability), que trata os buscadores e os agentes de IA como dois públicos da mesma camada legível por máquina.
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -418,9 +418,10 @@ Cada uma delas tem seu próprio guia. O campo de configuração é o ponto de en
 | `navigation` | Barra lateral explícita e abas do cabeçalho | [Navegação](/docs/content/navigation) |
 | `search` | Provedor (Orama, Pagefind, Algolia, entre outros) e indexação | [Busca](/docs/configuration/search) |
 | `markdown` | Opções de renderização de Markdown — blocos de código, âncoras de títulos, zoom em imagens | [Sintaxe](/docs/content/syntax) |
-| `ai` | `llms.txt`, Ask AI e o servidor MCP hospedado para agentes de programação | [IA](/docs/discoverability) |
+| `ai` | `llms.txt`, espelhos em Markdown, a API JSON e o servidor MCP hospedado para agentes de programação | [SEO e AEO](/docs/discoverability) |
+| `ai.ask` | O assistente Ask AI dentro da página | [Ask AI](/docs/configuration/ask-ai) |
 | `analytics` | Vercel, PostHog e scripts personalizados | [Analytics](/docs/configuration/analytics) |
-| `seo` | Metadados, imagens OG, feeds, dados estruturados | [SEO](/docs/discoverability) |
+| `seo` | Metadados, imagens OG, feeds, dados estruturados, sitemap, robots | [SEO e AEO](/docs/discoverability) |
 | `deployment` | Modo de saída, adaptador e URL do site | [Deploy](/docs/deployment) |
 | `redirects` | Redirecionamentos permanentes e temporários | [Deploy](/docs/deployment#redirects) |
 | `integrations` | Integrações do Astro adicionadas depois das integradas do Blume | [Personalização](/docs/configuration/customization#astro-integrations) |

@@ -6,10 +6,9 @@ export default {
     "theming",
     "customization",
     "search",
-    "ai",
+    "ask-ai",
     "analytics",
     "export",
-    "seo",
   ],
   title: "Configuração",
 };

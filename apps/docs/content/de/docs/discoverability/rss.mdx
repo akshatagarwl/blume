@@ -1,0 +1,25 @@
+---
+title: RSS-Feeds
+description: >-
+  Ein Feed pro datiertem Inhaltstyp — standardmäßig Blog und Changelog — bereitgestellt unter /<type>/rss.xml und automatisch an Feedreader gemeldet.
+---
+
+Blume erstellt für jeden Inhaltstyp in `rss.types` — standardmäßig `blog` und `changelog` —, der Seiten hat, einen RSS-Feed, der unter `/<type>/rss.xml` bereitgestellt wird. Siehe [Feeds](/docs/content#feeds) zum Verfassen von Blog- und Changelog-Einträgen mit Datumsangaben.
+
+```ts blume.config.ts lineNumbers
+seo: {
+  rss: {
+    enabled: true,
+    types: ["blog", "changelog"],
+    limit: 50,
+  },
+}
+```
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `enabled` | `true` | Feeds generieren. |
+| `types` | `["blog", "changelog"]` | Inhaltstypen, die jeweils einen Feed erhalten. |
+| `limit` | `50` | Maximale Anzahl Einträge pro Feed, neueste zuerst. |
+
+Blume fügt `<link rel="alternate">`-Tags ein, damit Browser und Feedreader die Feeds automatisch finden, und listet sie im [Agent-Readability-Manifest](/docs/discoverability/agent-discovery#agent-readability) auf, damit auch Agents sie finden. Einträge verlinken absolut, wenn [`deployment.site`](/docs/deployment) gesetzt ist.

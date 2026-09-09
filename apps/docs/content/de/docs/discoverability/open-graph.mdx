@@ -1,0 +1,114 @@
+---
+title: Open-Graph-Bilder
+description: >-
+  Generierte 1200×630-Social-Cards für jede Seite — Branding, Card-Ebenen, Schriften für nicht-lateinische Schriftsysteme und Overrides pro Seite.
+---
+
+Blume kann für jede Seite zur Build-Zeit eine 1200×630-Social-Card rendern — dank [Takumi](https://takumi.kane.tw) ohne Headless-Browser, sodass deine Builds schnell bleiben. Standardmäßig aktiv, sobald [`deployment.site`](/docs/deployment) gesetzt oder automatisch erkannt wurde (die `og:image`-URL muss absolut sein, damit Crawler etwas damit anfangen können), ansonsten deaktiviert. Mit `enabled` überschreibst du das in beide Richtungen:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: { enabled: true }, // or false to opt out even with a site set
+}
+```
+
+## Die generierte Card branden
+
+Setze ein lokales SVG und eine Farbpalette, damit die generierte Card zu deiner Marke passt. Das Logo kann in `public/` oder im Projektstammverzeichnis liegen. Lass einen Palettenwert weg, um den Standard beizubehalten.
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    logo: "/logo/og.svg",
+    palette: {
+      accent: "#ff5410",
+      background: "#1d1d1d",
+      foreground: "#fff6f2",
+      muted: "#a6a19f",
+      border: "#323232",
+    },
+  },
+}
+```
+
+Standardmäßig wird jede Card aus deinen Inhalten und deinem Theme abgeleitet — der **Seitentitel** als Überschrift, die **Seitenbeschreibung** als Untertitel (derselbe Text wie ihre `og:description`, `seo.description` sticht also `description`), dein **Site-Titel** als Eyebrow und dein Theme-**Accent** für das Zeichen. Die Bilder werden unter `/og/<slug>.png` ausgeliefert, spiegeln also jede Route, und werden selbst im Server-Modus als statische Dateien vorgerendert:
+
+| Seitenroute      | Bild-URL                |
+| ---------------- | ----------------------- |
+| `/`              | `/og/index.png`         |
+| `/quickstart`    | `/og/quickstart.png`    |
+| `/guides/deploy` | `/og/guides/deploy.png` |
+
+Überschreibe die generierte Card für jede beliebige Seite mit `seo.image` — eine Datei in `public/` oder eine externe URL. Sie hat Vorrang vor der generierten Card und funktioniert auch, wenn `og` deaktiviert ist, sodass du eigene Bilder mit generierten mischen kannst:
+
+```yaml lineNumbers
+---
+title: Pricing
+seo:
+  image: /og/pricing-custom.png
+---
+```
+
+:::note
+Jede Palettenfarbe akzeptiert beliebige CSS-Farben — Hex, `oklch(…)`, `rgb(…)` und so weiter. Der Accent akzeptiert außerdem ein benanntes Preset (`blue`, `teal`, …), passend zu [`theme.accent`](/docs/configuration/theming#accent). Eine Farbe, die der Renderer nicht parsen kann, lässt den Build fehlschlagen, statt stillschweigend eine Card in der Standardfarbe auszuliefern.
+:::
+
+Emojis in einem Seitentitel oder Site-Titel werden als [Twemoji](https://github.com/jdecked/twemoji)-Glyphen gerendert und während des Card-Renderings von einem CDN geladen — ein Build, dessen Titel Emojis enthalten, braucht also Netzwerkzugriff. Jede Glyphe wird pro Build nur einmal geladen, egal wie viele Seiten sie verwenden.
+
+## Card-Ebenen anzeigen, ausblenden oder überschreiben
+
+Neben der Überschrift trägt die Card drei optionale Ebenen: das **Markenzeichen** oben links (dein Logo oder eine Accent-Kachel mit dem Anfangsbuchstaben des Site-Titels), den **Untertitel** unter der Überschrift (die `description` der Seite oder deine Site-`description` für Seiten ohne eigene) und eine **Fußzeile** mit deinem Repo-Slug (aus `github`) und der URL der Site — dem Host der Deployment-Site plus [`deployment.base`](/docs/deployment#subpath-deploys), sodass bei einer GitHub-Pages-Projektsite `user.github.io/repo` steht. Überschreibe eine davon mit einem eigenen String oder blende sie mit `false` aus:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    site: "docs.acme.com", // footer URL text, or false to hide it
+    description: false, // hide the subtitle on every card; a string replaces the site fallback
+    logo: false, // no brand mark at all — not even the initial tile
+  },
+}
+```
+
+## Card-Schriften
+
+Standardmäßig wird die Card in Takumis eingebauter Schrift gerendert, die nur lateinische Glyphen abdeckt — ein Titel in einem anderen Schriftsystem (Japanisch, Chinesisch, Koreanisch, Arabisch, …) würde als Tofu erscheinen, also als leere Kästchen.
+
+**Setze [`theme.fonts`](/docs/configuration/theming#fonts), und die Card folgt dem.** Wenn deine Config eigene Schriften wählt, rendern die generierten Cards die Überschrift automatisch in deiner Display-Schrift und Beschreibung sowie Fußzeile in deiner Body-Schrift, sodass geteilte Links zur Site passen — inklusive nicht-lateinischer Abdeckung, ganz ohne hier etwas zu konfigurieren. (Familien von anderen Anbietern als Google werden übersprungen — der Card-Renderer kann nur von Google Fonts laden — lokale Schriftdateien funktionieren aber.)
+
+Um auf Cards andere Schriften als auf der Site zu verwenden oder um Schriftsysteme abzudecken, ohne das Theme anzufassen, setze `og.fonts` explizit — es sticht immer die aus dem Theme abgeleiteten Schriften:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    fonts: [
+      "Noto Sans JP",
+      { name: "Inter", weight: [400, 700] },
+      { name: "Berkeley Mono", src: "./fonts/BerkeleyMono-Regular.woff2" },
+    ],
+  },
+}
+```
+
+Jeder Eintrag ist ein Google-Fonts-Familienname, ein Objekt, das dessen `weight` (eine Zahl, eine Liste oder ein variabler Bereich wie `"100..900"`) und `style` (`"normal"`, `"italic"` oder beides) festlegt, oder eine lokale Schriftdatei — `src` wird relativ zum Projektstammverzeichnis aufgelöst, mit optionalen `weight` und `style`, falls die Metadaten der Datei selbst nicht entscheiden sollen.
+
+Google-Familien werden beim Build geladen — ein Build, der sie verwendet, braucht also Netzwerkzugriff — und der Renderer holt nur die Glyphen-Subsets, die jeder Titel tatsächlich verwendet. Der Fallback greift pro Glyphe, das Hinzufügen einer Familie betrifft also nur Glyphen, die die anderen Schriften nicht zeichnen können.
+
+Ein explizites `og.fonts: []` deaktiviert das komplett: Cards behalten die eingebaute Schrift, selbst wenn `theme.fonts` gesetzt ist.
+
+## Eigene Seitentitel
+
+Eine benutzerdefinierte [`.astro`-Seite](/docs/advanced/custom-pages) hat kein Frontmatter zum Auslesen, daher wird ihre generierte Card betitelt, indem das letzte URL-Segment ihrer Route lesbar gemacht wird — aus `/getting-started` wird „Getting Started", aus `/cli` aber „Cli". Benenne solche Cards explizit mit `og.titles`, nach Route indiziert (`"/"` adressiert die Startseite, deren Card sonst den Site-Titel trägt):
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    titles: {
+      "/cli": "CLI",
+    },
+  },
+}
+```
+
+Einträge gelten nur für benutzerdefinierte Seiten — die Card einer Inhaltsseite übernimmt ihre Überschrift immer aus dem Seitentitel, ändere diese also stattdessen im Frontmatter.
+
+`seo.image` ist Frontmatter und deckt daher nur Markdown- und MDX-Inhalte ab. Um einer benutzerdefinierten [`.astro`-Seite](/docs/advanced/custom-pages) ein eigenes Social-Bild zu geben — einer Marketing-Startseite oder Landingpage, und das ist auch der Weg, um allein der Startseite ein maßgeschneidertes Share-Bild zu geben — übergib die `ogImage`-Prop an `PageLayout`.

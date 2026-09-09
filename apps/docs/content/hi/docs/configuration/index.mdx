@@ -66,7 +66,7 @@ export default defineConfig({
     },
   },
 
-  // AI — see the AI guide
+  // AI — llms.txt, MCP; see the Discoverability section
   ai: {
     llmsTxt: true,
     // MCP server (needs server output)
@@ -76,7 +76,7 @@ export default defineConfig({
     },
   },
 
-  // SEO — OG images, feeds, sitemap, structured data; see the SEO guide
+  // SEO — OG images, feeds, sitemap, structured data; see the Discoverability section
   seo: {
     og: { enabled: true },
     rss: { enabled: true, types: ["blog", "changelog"] },
@@ -364,9 +364,9 @@ dateFormat: { year: "numeric", month: "2-digit", day: "2-digit" },
 | `timeZone` | IANA टाइम ज़ोन। डिफ़ॉल्ट `UTC` है, ताकि साइट कहीं भी बिल्ड हो, तिथि एक जैसी पढ़ी जाए। |
 | `calendar`, `numberingSystem` | कैलेंडर प्रणाली (जैसे `"japanese"`) और अंक प्रणाली (जैसे `"arab"`)। |
 
-## SEO
+## SEO और AI
 
-Open Graph इमेज, RSS फ़ीड्स, और JSON-LD स्ट्रक्चर्ड डेटा, `seo` के अंतर्गत समूहित। मेटाडेटा, फ़्रंटमैटर ओवरराइड्स, और पूरे संदर्भ के लिए [SEO गाइड](/docs/discoverability) देखें।
+मेटाडेटा, Open Graph इमेज, RSS फ़ीड्स, JSON-LD, साइटमैप, और `robots.txt` `seo` के अंतर्गत रहते हैं; `llms.txt`, कच्चा Markdown, JSON API, और MCP सर्वर `ai` के अंतर्गत रहते हैं। दोनों को [खोज-योग्यता](/docs/discoverability) सेक्शन में पेज-दर-पेज कवर किया गया है, जो सर्च इंजनों और AI एजेंट्स को एक ही मशीन-पठनीय परत के दो दर्शक वर्गों की तरह देखता है।
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -418,9 +418,10 @@ export default defineConfig({
 | `navigation` | स्पष्ट साइडबार और हेडर टैब्स | [नेविगेशन](/docs/content/navigation) |
 | `search` | प्रोवाइडर (Orama, Pagefind, Algolia, और अन्य) और इंडेक्सिंग | [खोज](/docs/configuration/search) |
 | `markdown` | मार्कडाउन रेंडरिंग विकल्प — कोड ब्लॉक्स, हेडिंग एंकर, इमेज ज़ूम | [सिंटैक्स](/docs/content/syntax) |
-| `ai` | `llms.txt`, Ask AI, और कोडिंग एजेंट्स के लिए होस्टेड MCP सर्वर | [AI](/docs/discoverability) |
+| `ai` | `llms.txt`, Markdown मिरर, JSON API, और कोडिंग एजेंट्स के लिए होस्टेड MCP सर्वर | [SEO और AEO](/docs/discoverability) |
+| `ai.ask` | पेज के भीतर मौजूद Ask AI सहायक | [Ask AI](/docs/configuration/ask-ai) |
 | `analytics` | Vercel, PostHog, और कस्टम स्क्रिप्ट्स | [एनालिटिक्स](/docs/configuration/analytics) |
-| `seo` | मेटाडेटा, OG इमेज, फ़ीड्स, स्ट्रक्चर्ड डेटा | [SEO](/docs/discoverability) |
+| `seo` | मेटाडेटा, OG इमेज, फ़ीड्स, स्ट्रक्चर्ड डेटा, साइटमैप, robots | [SEO और AEO](/docs/discoverability) |
 | `deployment` | आउटपुट मोड, अडैप्टर, और साइट URL | [डिप्लॉयमेंट](/docs/deployment) |
 | `redirects` | स्थायी और अस्थायी रीडायरेक्ट्स | [डिप्लॉयमेंट](/docs/deployment#redirects) |
 | `integrations` | Blume के अंतर्निर्मित इंटीग्रेशन के बाद जोड़े गए Astro इंटीग्रेशन | [कस्टमाइज़ेशन](/docs/configuration/customization#astro-integrations) |

@@ -1,0 +1,180 @@
+---
+title: Ask AI
+description: >-
+  Ein In-Page-Assistent, der in deinen Docs verankert ist — vorgeschlagene Fragen, eigene Anweisungen, Dimensionierung des Retrievals, Backends vom Vercel AI Gateway bis zu jedem OpenAI-kompatiblen Endpunkt und die Server-Ausgabe, die er braucht.
+---
+
+Füge einen Assistenten hinzu, der Leserfragen in einem In-Page-Chat-Panel beantwortet — unterstützt von einem streamenden Server-Endpunkt und dem [AI SDK](https://ai-sdk.dev). Er ist opt-in, und statische Docs bleiben vollständig statisch, bis du ihn aktivierst:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "gateway", // default
+    model: "openai/gpt-5.5",
+  },
+}
+```
+
+## Vorgeschlagene Fragen
+
+Fülle den leeren Zustand mit ein paar Einstiegs-Prompts. Jeder wird als klickbarer Vorschlag dargestellt — klicke einen an, um ihn abzusenden — mit einem optionalen [Lucide-Icon](/docs/content/components#icon) neben dem Label:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    suggestions: [
+      { label: "What is Blume?", icon: "rocket" },
+      { label: "How do I write a docs page?", icon: "file-text" },
+      { label: "How do I configure the theme?", icon: "settings" },
+    ],
+  },
+}
+```
+
+`label` ist die Frage, die gestellt wird; `icon` ist optional. Lässt du `suggestions` weg (oder leer), öffnet sich das Panel mit einem einfachen Eingabefeld.
+
+## Eigene Anweisungen
+
+Ergänze deinen eigenen System-Prompt-Text mit `instructions` — Identität, Sprache, Tonfall oder alles andere, was der Assistent im Blick behalten soll:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    instructions:
+      "You are Bloomy, the Acme docs assistant. Answer in the language the question was asked in, and keep answers under three paragraphs.",
+  },
+}
+```
+
+Dein Text wird an die eingebauten Anweisungen **angehängt** und ersetzt sie nicht: Der eingebaute Teil trägt den [Grounding](#grounding)-Vertrag — antworte nur anhand der abgerufenen Seiten, zitiere sie als Markdown-Links — von dem die Zitate im Chat-Panel abhängen, deshalb bleibt er unabhängig von deinen Ergänzungen erhalten.
+
+## Grounding
+
+Ask AI ist **in deinen Docs verankert**. Für jede Frage ruft es die relevantesten Seiten ab — über denselben lexikalischen [Orama](/docs/configuration/search)-Index, der auch die Suche auf der Seite antreibt — und injiziert sie in den System-Prompt des Modells, sodass Antworten aus deinen Inhalten statt aus dem Eigenwissen des Modells kommen. Der Assistent wird angewiesen, nur anhand der abgerufenen Seiten zu antworten, zu sagen, wenn etwas nicht abgedeckt ist, und die Seiten zu zitieren, aus denen er geschöpft hat.
+
+Die Seite, auf der sich der Leser gerade befindet, wird dem Kontext zuerst hinzugefügt und dient dazu, das Retrieval auf die Sprache dieser Seite zu beschränken, damit Antworten relevant für die aktuelle Stelle in den Docs bleiben. Das Retrieval läuft zur Anfragezeit aus einem in den Build eingebackenen Snapshot, funktioniert also unabhängig von deinem [Such](/docs/configuration/search)-Provider — selbst wenn die Suche auf `none` gesetzt ist — und braucht keine Konfiguration.
+
+Grounding ist für jedes Backend aktiv außer **[Inkeep](#backends)**, das sein eigenes Retrieval über die Inhalte ausführt, die du in seinem Dashboard indexiert hast.
+
+## Retrieval-Größe
+
+Wie viel Dokumentation eine Frage mitträgt, ist der größte Hebel dafür, wie lange der Leser auf das erste Wort wartet: Das Modell liest jedes injizierte Zeichen, bevor es ein Token ausgibt. Bei einem gehosteten Frontier-Modell ist das unsichtbar, bei einem selbst gehosteten Backend dominiert es. `retrieval` dimensioniert das:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    retrieval: {
+      maxResults: 3, // fewer pages retrieved per question
+      excerptChars: 1200, // shorter excerpt from each one
+      contextBudget: 3000, // smaller total injection
+    },
+  },
+}
+```
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `maxResults` | `6` | Pro Frage abgerufene Dokumente. |
+| `excerptChars` | `2000` | Zeichen, die von jeder abgerufenen Seite behalten werden. |
+| `contextBudget` | `10000` | Insgesamt injizierte Zeichen über alle Auszüge hinweg. |
+
+Die drei sind nicht austauschbar. `contextBudget` begrenzt die gesamte Injektion, `excerptChars` entscheidet, wie tief der Auszug in eine einzelne lange Seite hineinreicht — erhöhe es, wenn eine Seite die ganze Antwort enthält und der Auszug sie abschneidet — und `maxResults` begrenzt, wie viele Seiten das Retrieval hinzufügt. Die Seite, die der Leser gerade ansieht, wird zusätzlich zu den abgerufenen injiziert, eine Antwort kann also bis zu eine Seite mehr zitieren als `maxResults`.
+
+Die Standardwerte passen zu einem gehosteten Modell. Senke sie, wenn du von eigener Hardware ausliefert und die Zeit bis zum ersten Token wichtiger ist als der Recall; Antworten bleiben in beiden Fällen verankert, und der Assistent ist angewiesen, zu sagen, wenn etwas nicht abgedeckt ist, statt die Lücke zu füllen.
+
+## Externer Endpunkt
+
+Du hast schon ein API-Backend für AI? Richte das Panel darauf aus und halte den Docs-Build statisch:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    endpoint: "https://api.example.com/v1/docs/ask",
+  },
+}
+```
+
+Blume sendet denselben `POST`-Body wie seine eingebaute Route:
+
+```json
+{
+  "messages": [{ "role": "user", "content": "How do I deploy?" }],
+  "page": { "path": "/deployment" }
+}
+```
+
+Gib eine erfolgreiche Antwort zurück, deren Body ein reiner UTF-8-Textstream ist. Liegt der Endpunkt auf einem anderen Origin, erlaube den Docs-Origin per CORS: akzeptiere `OPTIONS` und `POST`, lasse den Request-Header `content-type` zu und gib die CORS-Header sowohl beim Preflight als auch bei der gestreamten Antwort zurück. Mit gesetztem `endpoint` erzeugt Blume die Chat-UI, aber keine Server-Route, keinen Grounding-Snapshot, keine Provider-Abhängigkeit und keine Warnung zu Provider-Secrets; dein Backend verantwortet Retrieval, Authentifizierung, Rate Limiting, Modellzugriff und Zitate.
+
+## Server-Ausgabe erforderlich
+
+Blumes eingebautes Ask-AI-Backend ist eine Server-Route (`POST /api/ask`) und kann daher nicht auf einem statischen Build laufen. Wechsle zur Server-Ausgabe und wähle einen Adapter:
+
+```ts blume.config.ts lineNumbers
+deployment: {
+  output: "server",
+  adapter: "vercel",
+}
+```
+
+Ein statischer Build mit aktiviertem Ask AI und ohne externen `endpoint` schlägt sofort fehl, mit einer Meldung, die dich auffordert, `deployment.output` auf `server` zu setzen. Die Adapter findest du unter [Deployment](/docs/deployment).
+
+## Backends
+
+Standardmäßig läuft Ask AI über das **Vercel AI Gateway**: `model` ist ein `provider/model`-String, du wechselst Modelle also durch Änderung dieses Strings (`openai/gpt-5.5`, `anthropic/claude-sonnet-4-5` und so weiter), ohne ein Provider-SDK installieren zu müssen. Das Gateway liest `AI_GATEWAY_API_KEY` aus deiner Umgebung und wird beim Deployment auf Vercel automatisch verdrahtet.
+
+Setze `provider`, um Ask AI woanders hinzuleiten. Jedes Backend liest seinen API-Key aus einer Umgebungsvariable und streamt über ein Provider-SDK, das du in deinem Projekt installierst — nur das, das du nutzt:
+
+| `provider` | `model` | API-Key-Umgebungsvariable | Zu installierendes SDK |
+| --- | --- | --- | --- |
+| `gateway` (Standard) | ein `provider/model`-String über das AI Gateway | `AI_GATEWAY_API_KEY` | keins — bei Blume enthalten |
+| `openrouter` | jedes [OpenRouter](https://openrouter.ai)-Modell | `OPENROUTER_API_KEY` | `@openrouter/ai-sdk-provider` |
+| `llmgateway` | jedes [LLMGateway](https://llmgateway.io)-Modell | `LLMGATEWAY_API_KEY` | `@ai-sdk/openai-compatible` |
+| `inkeep` | ein [Inkeep](https://inkeep.com)-QA-Modell | `INKEEP_API_KEY` | `@ai-sdk/openai-compatible` |
+| `openai-compatible` | was auch immer dein Endpunkt ausliefert | mit `apiKeyEnv` festgelegt | `@ai-sdk/openai-compatible` |
+
+Die SDKs sind optionale Peer-Dependencies, füge deinem Projekt also das hinzu, das dein Backend braucht (z. B. `npm install @openrouter/ai-sdk-provider`). Fehlt es, warnt der Build mit dem exakten Paketnamen, bevor Vite den Import nicht auflösen könnte.
+
+Zum Beispiel, um OpenRouter zu nutzen:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "openrouter",
+    model: "anthropic/claude-sonnet-4-5",
+  },
+}
+```
+
+Jeder OpenAI-kompatible Endpunkt funktioniert über `openai-compatible` — gib die `baseUrl` und die Umgebungsvariable mit dem Key an:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "openai-compatible",
+    baseUrl: "https://my-gateway.example.com/v1",
+    apiKeyEnv: "MY_GATEWAY_API_KEY",
+    model: "gpt-4o",
+  },
+}
+```
+
+Setze `apiKeyEnv` (und für die benannten Provider `baseUrl`) bei jedem Backend, um auf eine andere Umgebungsvariable oder einen Proxy zu zeigen.
+
+:::note
+**Inkeep** antwortet anhand der Inhalte, die du im Inkeep-Dashboard indexiert hast — es führt sein eigenes Retrieval aus — deshalb lässt Blume es ungegroundet. Jedes andere Backend ist in den Seiten dieser Site [verankert](#grounding).
+:::
+
+Keys werden mit `process.env` gelesen, was die Adapter für Node, Vercel und Netlify abdeckt. Auf Cloudflare stellst du den Key über das [Runtime-Binding](https://docs.astro.build/en/guides/integrations-guide/cloudflare/#environment-variables-and-secrets) der Plattform bereit. Ask AI zu aktivieren schaltet außerdem React für die In-Page-Island ein — siehe [Customization](/docs/configuration/customization#interactive-islands).
+
+## Rate Limiting
+
+Der Endpunkt `POST /api/ask` ist **nicht authentifiziert** — er muss es sein, damit der In-Page-Assistent ihn aufrufen kann. Blume validiert jede Anfrage — verwirft fehlerhafte Bodies, begrenzt sie auf 1–40 Nachrichten und akzeptiert nur die Rollen `user`/`assistant`, damit ein Aufrufer keinen eigenen System-Prompt injizieren und die Route als allgemeinen LLM-Proxy umnutzen kann — um zu begrenzen, wie viel ein einzelner Aufruf bei deinem Modell verbrauchen kann; verhindern kann es aber nicht, dass jemand den Endpunkt wiederholt aufruft. Wenn Kostenmissbrauch ein Thema ist, stelle einen Rate Limiter vor die Route — das Edge-Rate-Limiting deines Hosters (z. B. von Vercel), eine Middleware oder die Ausgabelimits pro Key bei deinem Modellanbieter.
+
+Der Endpunkt wird im [Agent-Readability-Manifest](/docs/discoverability/agent-discovery#agent-readability) neben der übrigen maschinenlesbaren Oberfläche der Site bekannt gemacht.

@@ -1,0 +1,197 @@
+---
+title: एजेंट डिस्कवरी
+description: >-
+  एजेंट बिना अनुमान लगाए आपकी मशीन-रीडेबल सरफेस को कैसे ढूँढते हैं — एजेंट-रीडेबिलिटी मैनिफ़ेस्ट, Link हेडर, RFC 9727 API कैटलॉग, WebMCP, प्रकाशित स्किल्स, DNS-आधारित डिस्कवरी, और Web Bot Auth कीज़।
+---
+
+`llms.txt`, Markdown मिरर, एक JSON API, और एक MCP सर्वर प्रकाशित करना केवल आधा काम है — एजेंट को अब भी उन्हें ढूँढना पड़ता है। Blume पूरी सरफेस का प्रचार उन्हीं परंपराओं के माध्यम से करता है जिन्हें एजेंट वास्तव में जाँचते हैं: साइट रूट पर एक मैनिफ़ेस्ट, `Link` हेडर और `<link>` टैग, well-known फ़ाइलें, और ब्राउज़र का अपना मॉडल कॉन्टेक्स्ट। यहाँ सब कुछ डिफ़ॉल्ट रूप से चालू है और उसी से व्युत्पन्न है जो आपने पहले ही सक्षम कर रखा है।
+
+## एजेंट रीडेबिलिटी
+
+Blume आपकी साइट रूट पर एक **`/agent-readability.json`** मैनिफ़ेस्ट लिखता है जो इस अनुभाग में वर्णित एजेंट-मुखी सरफेस को इंडेक्स करता है — ताकि एजेंट परंपराओं का अनुमान लगाने या HTML स्क्रैप करने के बजाय एक ही फ़ेच में उसे खोज सके। `llms.txt` की तरह, यह डिफ़ॉल्ट रूप से चालू है:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  agentReadability: true,
+}
+```
+
+मैनिफ़ेस्ट केवल वही सूचीबद्ध करता है जो आपने सक्षम किया है — [रॉ Markdown](/docs/discoverability/markdown) मिरर पैटर्न, [JSON API](/docs/discoverability/json-api) और उसका OpenAPI विवरण, [`llms.txt`](/docs/discoverability/llms-txt) और `llms-full.txt`, [MCP सर्वर](/docs/discoverability/mcp) और उसका डिस्कवरी डॉक्यूमेंट, [Ask AI](/docs/configuration/ask-ai) एंडपॉइंट, [साइटमैप](/docs/discoverability/sitemap-and-robots#sitemap), और [RSS फ़ीड](/docs/discoverability/rss) — साथ ही आपकी साइट का नाम, विवरण, सोर्स रिपॉज़िटरी, और [content-signal](/docs/discoverability/sitemap-and-robots#content-signals) उपयोग नीति। [`deployment.site`](/docs/deployment) सेट होने पर URL निरपेक्ष होते हैं और अन्यथा रूट-सापेक्ष:
+
+```json agent-readability.json
+{
+  "artifacts": {
+    "markdown": {
+      "contentNegotiation": "text/markdown",
+      "pattern": "https://docs.example.com/{route}.md"
+    },
+    "api": {
+      "openapi": "https://docs.example.com/openapi.json",
+      "pages": "https://docs.example.com/api/docs/pages.json",
+      "search": "https://docs.example.com/api/docs/search"
+    },
+    "llmsFullTxt": "https://docs.example.com/llms-full.txt",
+    "llmsTxt": "https://docs.example.com/llms.txt",
+    "mcp": {
+      "discovery": "https://docs.example.com/.well-known/mcp.json",
+      "url": "https://docs.example.com/mcp"
+    }
+  },
+  "description": "Docs for the Acme API.",
+  "generator": "blume@1.0.0",
+  "name": "Acme Docs",
+  "site": "https://docs.example.com",
+  "contentUsage": { "search": true, "ai-input": true, "ai-train": true },
+  "repository": "https://github.com/acme/docs"
+}
+```
+
+`contentNegotiation` फ़ील्ड केवल तभी दिखाई देता है जब डिप्लॉय की गई साइट वास्तव में `Accept: text/markdown` हेडर का सम्मान करती है — देखें [कॉन्टेंट नेगोशिएशन](/docs/discoverability/markdown#content-negotiation); हर दूसरे डिप्लॉयमेंट पर मैनिफ़ेस्ट केवल `.md` मिरर पैटर्न का प्रचार करता है।
+
+इसे छोड़ने के लिए `seo.agentReadability` को `false` पर सेट करें, या नियंत्रण अपने हाथ में लेने के लिए अपनी स्वयं की `public/agent-readability.json` भेजें — Blume उस फ़ाइल को कभी अधिलेखित नहीं करता जिसे आप `public/` में रखते हैं।
+
+## डिस्कवरी Link हेडर
+
+जो एजेंट किसी साइट की जाँच करते हैं वे मैनिफ़ेस्ट को ढूँढना नहीं जानते — इसलिए Blume IANA-पंजीकृत रिलेशन प्रकारों का उपयोग करते हुए, होमपेज पर एक [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) `Link` रिस्पॉन्स हेडर में भी इसका प्रचार करता है:
+
+```http
+Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json",
+  </openapi.json>; rel="service-desc"; type="application/json",
+  </agent-readability.json>; rel="describedby"; type="application/json",
+  </llms.txt>; rel="describedby"; type="text/plain",
+  </index.md>; rel="alternate"; type="text/markdown"
+```
+
+प्रत्येक प्रविष्टि केवल तभी दिखाई देती है जब उसकी सुविधा चालू हो। `alternate` लिंक होमपेज के Markdown मिरर की ओर संकेत करता है — जब होम रूट एक कॉन्टेंट पेज हो तो पेज का अपना [रॉ Markdown](/docs/discoverability/markdown), या जब वह एक लैंडिंग पेज हो तो संश्लेषित `llms.txt` फ़ॉलबैक। `service-desc` लिंक ([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)) [JSON API](/docs/discoverability/json-api) के OpenAPI विवरण की ओर संकेत करता है, और `api-catalog` [जनरेट किए गए API कैटलॉग](#api-catalog) की ओर। यह हेडर हर उस सरफेस पर चलता है जिसे Blume नियंत्रित करता है: dev सर्वर (`curl -I localhost:4321` से इसे जाँचें), उत्सर्जित `_headers` फ़ाइल के माध्यम से स्टैटिक बिल्ड (Netlify और Cloudflare), और डिप्लॉय के रूटिंग नियमों के माध्यम से Vercel सर्वर बिल्ड।
+
+हालाँकि हर एजेंट रूट से प्रवेश नहीं करता — कोई एजेंट जो किसी खोज परिणाम या साझा किए गए लिंक का अनुसरण करता है, वह किसी गहरे पेज पर पहुँचता है और होमपेज हेडर कभी नहीं देखता। इसलिए हर रेंडर किया गया पेज भी उन्हीं IANA-पंजीकृत रिलेशनों का उपयोग करते हुए, अपने HTML `<head>` में वही डिस्कवरी लिंक रखता है:
+
+```html
+<link
+  rel="describedby"
+  href="/agent-readability.json"
+  type="application/json"
+/>
+<link rel="describedby" href="/llms.txt" type="text/plain" />
+<link rel="alternate" href="/docs/example.md" type="text/markdown" />
+```
+
+यहाँ `alternate` लिंक _उसी पेज के अपने_ [रॉ-Markdown मिरर](/docs/discoverability/markdown) की ओर संकेत करता है, ताकि एजेंट जिस HTML पर पहुँचा है वहाँ से सीधे टोकन-कुशल संस्करण पर जा सके। चूँकि हेड लिंक प्रीरेंडर किए गए HTML के साथ यात्रा करते हैं, वे उन होस्ट्स पर भी काम करते हैं जो `_headers` को अनदेखा करते हैं और कस्टम रिस्पॉन्स हेडर बिल्कुल नहीं भेज सकते (GitHub Pages, S3) — चाहे एजेंट किसी भी पेज से प्रवेश करे।
+
+## API कैटलॉग
+
+जब साइट API प्रकाशित करती है, तो Blume `/.well-known/api-catalog` पर एक [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) API कैटलॉग जनरेट करता है — एक [linkset](https://www.rfc-editor.org/rfc/rfc9264) जो एजेंटों को केवल डोमेन से ही आपके API की गणना करने देता है, जिसे हर बिल्ड सरफेस पर उसके पंजीकृत `application/linkset+json` मीडिया प्रकार के साथ सर्व किया जाता है। कॉन्फ़िगर करने के लिए कुछ नहीं है: कैटलॉग उसी से व्युत्पन्न होता है जो पहले से `blume.config.ts` में है। प्रत्येक [OpenAPI या AsyncAPI रेफ़रेंस](/docs/advanced/api-reference) अपने रेंडर किए गए डॉक्स रूट पर एंकर की गई एक प्रविष्टि बन जाता है, जिसमें `service-doc` उन डॉक्स की ओर और `service-desc` स्पेक की ओर संकेत करता है जब वह किसी फ़ेच करने योग्य URL पर रहती है; साइट का अपना [JSON API](/docs/discoverability/json-api) अपने `/openapi.json` द्वारा वर्णित एक प्रविष्टि बन जाता है; और [MCP सर्वर](/docs/discoverability/mcp) अपने डिस्कवरी डॉक्यूमेंट को सेवा विवरण के रूप में रखते हुए एक प्रविष्टि बन जाता है:
+
+```json .well-known/api-catalog
+{
+  "linkset": [
+    {
+      "anchor": "https://docs.example.com/reference",
+      "service-doc": [
+        { "href": "https://docs.example.com/reference", "type": "text/html" }
+      ],
+      "service-desc": [{ "href": "https://api.example.com/openapi.json" }]
+    },
+    {
+      "anchor": "https://docs.example.com/api/docs",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
+    },
+    {
+      "anchor": "https://docs.example.com/mcp",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/.well-known/mcp.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
+    }
+  ]
+}
+```
+
+ऐसी साइट जिसमें कोई API रेफ़रेंस नहीं है, कोई MCP सर्वर नहीं है, और [JSON API](/docs/discoverability/json-api) बंद है, कोई कैटलॉग उत्सर्जित नहीं करती — उसमें कुछ होता ही नहीं। हर जगह की तरह, आपके द्वारा स्वयं भेजी गई `public/.well-known/api-catalog` फ़ाइल जनरेट की गई फ़ाइल पर वरीयता पाती है।
+
+## WebMCP
+
+[WebMCP](https://webmachinelearning.github.io/webmcp/) एक उभरता हुआ ब्राउज़र API है जो किसी पेज को सीधे एजेंटिक ब्राउज़र के साथ टूल पंजीकृत करने देता है — किसी अलग सर्वर कनेक्शन की आवश्यकता नहीं। हर Blume पेज पेज के मॉडल कॉन्टेक्स्ट पर डॉक्स की रीड-ओनली सरफेस पंजीकृत करता है: `search_docs` (साइट खोज), `get_page` (किसी पेज का [रॉ Markdown](/docs/discoverability/markdown)), और `list_pages` ([`llms.txt`](/docs/discoverability/llms-txt) इंडेक्स)। स्क्रिप्ट बहुत छोटी है, जब तक कोई टूल वास्तव में कॉल न किया जाए तब तक कोई खोज मशीनरी लोड नहीं करती, और API के बिना हर ब्राउज़र में चुपचाप no-op हो जाती है — जो आज [Chrome के अर्ली प्रीव्यू](https://developer.chrome.com/blog/webmcp-epp) के बाहर हर ब्राउज़र है। यह उसी सरफेस पर पंजीकरण करती है जिसे अस्थिर स्पेक उजागर करता है (`navigator.modelContext` या `document.modelContext`), `provideContext` या प्रति-टूल `registerTool` के माध्यम से।
+
+यह डिफ़ॉल्ट रूप से चालू है; ऑप्ट आउट करने के लिए `webmcp: false` सेट करें:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  webmcp: false,
+}
+```
+
+## स्किल्स डिस्कवरी
+
+यदि आपका प्रोजेक्ट [एजेंट स्किल्स](https://agentskills.io) भेजता है — [Blume रिपॉज़िटरी स्वयं ऐसा करती है](/docs/advanced/skills) — तो `ai.skills` को उस डायरेक्टरी की ओर संकेत करें जो उन्हें रखती है, और बिल्ड उन्हें [Agent Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc) के अनुसार डिस्कवरी के लिए प्रकाशित करता है:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  skills: "./skills",
+}
+```
+
+पथ आपके प्रोजेक्ट रूट के सापेक्ष हल होता है, और `SKILL.md` वाली प्रत्येक उप-डायरेक्टरी एक प्रकाशित स्किल बन जाती है। ऐसी स्किल जो अकेली `SKILL.md` है, उसे यथावत `/.well-known/agent-skills/<name>/SKILL.md` (`type: "skill-md"`) पर कॉपी किया जाता है; सहायक संसाधनों (`scripts/`, `references/`, `assets/`) वाली स्किल को एक नियतात्मक `.tar.gz` (`type: "archive"`) में बंडल किया जाता है ताकि अनपैक करने के बाद उसके सापेक्ष रेफ़रेंस हल हो जाएँ, और स्क्रिप्ट के एक्ज़ीक्यूट बिट्स संरक्षित रहें। `/.well-known/agent-skills/index.json` पर डिस्कवरी इंडेक्स v0.2.0 `$schema` रखता है और, प्रति स्किल, उसका नाम, प्रकार, विवरण (`SKILL.md` फ़्रंटमैटर से), आर्टिफ़ैक्ट URL, और वह SHA-256 डाइजेस्ट जिसके विरुद्ध क्लाइंट डाउनलोड सत्यापित करते हैं।
+
+जिन स्किल्स का `name`/`description` अनुपस्थित या स्पेक-अमान्य है, उन्हें टूटी हुई अवस्था में प्रकाशित करने के बजाय एक बिल्ड चेतावनी के साथ छोड़ दिया जाता है, और आपके द्वारा स्वयं भेजी गई `public/.well-known/agent-skills/index.json` पूरी सरफेस पर नियंत्रण ले लेती है। प्रकाशित स्किल्स [`llms.txt`](/docs/discoverability/llms-txt#generated-sections) में भी सूचीबद्ध होती हैं।
+
+## DNS-आधारित डिस्कवरी (DNS-AID)
+
+[DNS for AI Discovery](https://datatracker.ietf.org/doc/draft-mozleywilliams-dnsop-dnsaid/) एक उभरता हुआ IETF ड्राफ़्ट है जो एजेंटों को एक भी HTTP अनुरोध किए बिना किसी साइट की AI सरफेस खोजने देता है, एक well-known DNS एंट्रीपॉइंट पर ServiceMode [SVCB/HTTPS रिकॉर्ड](https://www.rfc-editor.org/rfc/rfc9460) क्वेरी करके। DNS रिकॉर्ड आपके ज़ोन में रहते हैं, बिल्ड में नहीं, इसलिए यह एकमात्र डिस्कवरी सरफेस है जिसे Blume आपके लिए प्रकाशित नहीं कर सकता — इसके बजाय, अपने DNS प्रदाता के पास एक रिकॉर्ड जोड़ें:
+
+```txt
+_index._agents.docs.example.com. 3600 IN HTTPS 1 docs.example.com. alpn=h2
+```
+
+यदि आपका प्रदाता `HTTPS` रिकॉर्ड प्रकार प्रदान करता है तो उसका उपयोग करें (Vercel DNS करता है; यह सादे `SVCB` प्रकार का समर्थन नहीं करता), अन्यथा `alpn` और `port` पैरामीटर वाला एक ServiceMode `SVCB` रिकॉर्ड। ड्राफ़्ट यह भी अनुशंसा करता है कि ज़ोन को DNSSEC से साइन किया जाए ताकि सत्यापन करने वाले रिज़ॉल्वर प्रमाणीकृत उत्तर लौटाएँ — Cloudflare जैसे प्रदाता इसे एक क्लिक में सक्षम कर देते हैं, जबकि कुछ (Vercel DNS सहित) इसका समर्थन बिल्कुल नहीं करते।
+
+`blume audit --url <origin>` यह आपके लिए जाँचता है: जब [`deployment.site`](/docs/deployment) सेट होता है, तो नेटवर्क टियर DNS-over-HTTPS के माध्यम से एंट्रीपॉइंट को क्वेरी करता है और यदि कोई रिकॉर्ड मौजूद नहीं है तो प्रकाशित करने योग्य सटीक रिकॉर्ड बताता है, साथ ही यह भी कि उत्तर DNSSEC-प्रमाणीकृत हैं या नहीं। यदि आपका नेटवर्क सार्वजनिक रिज़ॉल्वरों (Google, Cloudflare) को ब्लॉक करता है तो लुकअप को अपने स्वयं के रिज़ॉल्वर की ओर संकेत करने के लिए `BLUME_DOH_URL` सेट करें।
+
+## Web Bot Auth
+
+[Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) दूसरी दिशा में काम करता है: यह एजेंटों द्वारा आपके डॉक्स पढ़ने के बारे में नहीं है, बल्कि **आपके संगठन के एजेंटों द्वारा स्वयं की पहचान बताने** के बारे में है जब वे अन्यत्र अनुरोध करते हैं। आपके एजेंट अपने अनुरोधों को [HTTP Message Signatures](https://www.rfc-editor.org/rfc/rfc9421) से साइन करते हैं, और प्राप्तकर्ता साइटें उन्हें आपके डोमेन पर प्रकाशित एक सार्वजनिक-कुंजी डायरेक्टरी के विरुद्ध सत्यापित करती हैं। यदि आपका संगठन एजेंट चलाता है और आपकी Blume साइट उसी डोमेन पर रहती है जिससे वे स्वयं की पहचान बताते हैं, तो उनकी सार्वजनिक कुंजियाँ प्रकाशित करें:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  webBotAuth: {
+    keys: [{ kty: "OKP", crv: "Ed25519", x: "JrQLj5P_89iXES9-vFgrIy29c…" }],
+  },
+}
+```
+
+तब Blume हर बिल्ड सरफेस पर `/.well-known/http-message-signatures-directory` पर JWKS को उसके पंजीकृत मीडिया प्रकार के साथ सर्व करता है। डायरेक्टरी परिभाषा से ही सार्वजनिक है, इसलिए कॉन्फ़िग केवल सार्वजनिक कुंजियाँ ही स्वीकार करता है — निजी सामग्री (`d`, `p`, `q`, …) वाला JWK लीक हुए क्रेडेंशियल को भेजने के बजाय एक त्रुटि के साथ सत्यापन में विफल हो जाता है। एक Ed25519 जोड़ी इससे जनरेट करें:
+
+```bash
+node -e 'const { generateKeyPairSync } = require("node:crypto"); const { publicKey, privateKey } = generateKeyPairSync("ed25519"); console.log("public: ", JSON.stringify(publicKey.export({ format: "jwk" }))); console.log("private:", JSON.stringify(privateKey.export({ format: "jwk" })))'
+```
+
+सार्वजनिक JWK ऊपर के कॉन्फ़िग में जाती है; निजी वाली वहाँ जाती है जहाँ आपका साइनिंग एजेंट चलता है (एक सीक्रेट मैनेजर, कभी भी रिपॉज़िटरी नहीं)। यदि आपका संगठन एजेंट संचालित नहीं करता, तो इसे छोड़ दें — एक खाली डायरेक्टरी ऐसा कुछ नहीं दर्शाती जिसे सत्यापित करना सार्थक हो।
+
+चूँकि `blume.config.ts` बिल्ड समय पर निष्पादित होती है, कुंजी को हार्डकोड करने की आवश्यकता नहीं है — कॉन्फ़िग को कुंजी ब्लॉब्स से मुक्त रखने और बिना कमिट के रोटेट करने के लिए इसे बिल्ड-टाइम एनवायरनमेंट वेरिएबल से लोड करें:
+
+```ts blume.config.ts lineNumbers
+const webBotAuthKey = process.env.WEB_BOT_AUTH_PUBLIC_JWK;
+
+export default defineConfig({
+  ai: {
+    webBotAuth: {
+      keys: webBotAuthKey ? [JSON.parse(webBotAuthKey)] : [],
+    },
+  },
+});
+```
+
+जिन एनवायरनमेंट में यह वेरिएबल नहीं है वे कोई डायरेक्टरी प्रकाशित नहीं करते, और इस तरह लोड की गई कुंजी बिल्कुल इनलाइन कुंजी की तरह ही सत्यापित होती है — निजी-सामग्री जाँच सहित। (सार्वजनिक कुंजी कोई सीक्रेट नहीं है, इसलिए उसे इनलाइन कमिट करना भी उतना ही ठीक है; env वेरिएबल एक एर्गोनॉमिक विकल्प है, सुरक्षा संबंधी नहीं।)

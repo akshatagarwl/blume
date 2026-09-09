@@ -65,7 +65,7 @@ export default defineConfig({
     },
   },
 
-  // AI — see the AI guide
+  // AI — llms.txt, MCP; see the Discoverability section
   ai: {
     llmsTxt: true,
     // MCP server (needs server output)
@@ -75,7 +75,7 @@ export default defineConfig({
     },
   },
 
-  // SEO — OG images, feeds, sitemap, structured data; see the SEO guide
+  // SEO — OG images, feeds, sitemap, structured data; see the Discoverability section
   seo: {
     og: { enabled: true },
     rss: { enabled: true, types: ["blog", "changelog"] },
@@ -363,9 +363,9 @@ dateFormat: { year: "numeric", month: "2-digit", day: "2-digit" },
 | `timeZone` | IANA タイムゾーン。デフォルトは `UTC` なので、サイトをどこでビルドしても日付は同じに表示されます。 |
 | `calendar`、`numberingSystem` | 暦法（例: `"japanese"`）と記数法（例: `"arab"`）。 |
 
-## SEO
+## SEO と AI
 
-Open Graph 画像、RSS フィード、JSON-LD 構造化データを `seo` にまとめています。メタデータ、フロントマターによる上書き、完全なリファレンスは [SEO ガイド](/docs/discoverability) を参照してください。
+メタデータ、Open Graph 画像、RSS フィード、JSON-LD、サイトマップ、`robots.txt` は `seo` の下にまとまっています。`llms.txt`、生の Markdown、JSON API、MCP サーバーは `ai` の下です。どちらも [発見可能性](/docs/discoverability) セクションでページごとに解説しており、そこでは検索エンジンと AI エージェントを、同じ機械可読レイヤーに対する 2 つのオーディエンスとして扱っています。
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -417,9 +417,10 @@ export default defineConfig({
 | `navigation` | サイドバーとヘッダータブの明示的な指定 | [ナビゲーション](/docs/content/navigation) |
 | `search` | プロバイダー（Orama、Pagefind、Algolia など）とインデックス作成 | [検索](/docs/configuration/search) |
 | `markdown` | Markdown のレンダリングオプション — コードブロック、見出しアンカー、画像ズーム | [構文](/docs/content/syntax) |
-| `ai` | `llms.txt`、Ask AI、コーディングエージェント向けのホスト型 MCP サーバー | [AI](/docs/discoverability) |
+| `ai` | `llms.txt`、Markdown ミラー、JSON API、コーディングエージェント向けのホスト型 MCP サーバー | [SEO と AEO](/docs/discoverability) |
+| `ai.ask` | ページ内の Ask AI アシスタント | [Ask AI](/docs/configuration/ask-ai) |
 | `analytics` | Vercel、PostHog、カスタムスクリプト | [アナリティクス](/docs/configuration/analytics) |
-| `seo` | メタデータ、OG 画像、フィード、構造化データ | [SEO](/docs/discoverability) |
+| `seo` | メタデータ、OG 画像、フィード、構造化データ、サイトマップ、robots | [SEO と AEO](/docs/discoverability) |
 | `deployment` | 出力モード、アダプター、サイト URL | [デプロイ](/docs/deployment) |
 | `redirects` | 恒久的および一時的なリダイレクト | [デプロイ](/docs/deployment#redirects) |
 | `integrations` | Blume の組み込み機能の後に追加される Astro インテグレーション | [カスタマイズ](/docs/configuration/customization#astro-integrations) |

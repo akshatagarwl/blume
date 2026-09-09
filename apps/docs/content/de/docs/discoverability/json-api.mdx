@@ -1,0 +1,59 @@
+---
+title: JSON-API
+description: >-
+  Die schreibgeschützte JSON-API, die jede Blume-Site ausliefert — Seitenindex, Dokumente pro Seite, Navigation, Suche — und die OpenAPI-3.1-Beschreibung, mit der Function-Calling-Frameworks daraus Tools bauen können.
+---
+
+Jede Blume-Site liefert ihre Dokumentation zusätzlich als kleine, schreibgeschützte **JSON-API** aus — das REST-Pendant zu den Tools des [MCP-Servers](/docs/discoverability/mcp), über denselben Seiten-Snapshot, für Agents und Function-Calling-Frameworks, die schlichtes HTTP statt MCP sprechen. Sie ist standardmäßig aktiv und braucht keine Konfiguration:
+
+| Endpunkt | Liefert |
+| --- | --- |
+| `/api/docs/pages.json` | Jede Seite mit ihrer Route, ihrem Titel, ihrer Beschreibung, ihrem Inhaltstyp, ihrer Sprache, ihren Facetten und den URLs ihrer gerenderten, Markdown- und JSON-Form. |
+| `/api/docs/pages/{route}.json` | Eine Seite: ihr Indexeintrag plus das Agent-Markdown (derselbe Body, den `get_page` zurückgibt). `{route}` ist die Seitenroute ohne führenden Schrägstrich, `index` für die Startseite. |
+| `/api/docs/navigation.json` | Der Navigationsbaum — Header-Tabs und die Seitenleisten-Hierarchie. |
+| `/api/docs/search?q=` | Volltextsuche, mit derselben Eingrenzung über `limit`, `contentTypes`, `locale`, `version` und `filters[key]` wie bei `search_docs`. Nur bei Server-Output. |
+| `/openapi.json` | Die OpenAPI-3.1-Beschreibung der gesamten maschinenlesbaren Oberfläche. |
+
+Der Seitenindex, die Dokumente pro Seite und die Navigation werden vorgerendert, sodass eine statische Site sie von jedem Host als Dateien ausliefert. Die Suche ist ein Live-Endpunkt und existiert nur bei [Server-Output](/docs/deployment#server-rendering), wo sie denselben Index nutzt wie `search_docs`.
+
+## Fehler
+
+Fehler sind Problem Details nach [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`application/problem+json`) mit einem stabilen `code`, einem `detail` und einem `resolution`-Hinweis, der dem Agent sagt, wo es weitergeht — eine fehlende Seite, eine leere Suchanfrage oder, bei Server-Output, jede `/api/…`-URL, die kein Endpunkt beantwortet:
+
+```json
+{
+  "code": "API_ROUTE_NOT_FOUND",
+  "detail": "No API route exists at /api/nope.",
+  "instance": "/api/nope",
+  "links": [
+    {
+      "href": "https://docs.example.com/openapi.json",
+      "label": "OpenAPI description"
+    },
+    {
+      "href": "https://docs.example.com/api/docs/pages.json",
+      "label": "Page index"
+    }
+  ],
+  "resolution": "Discover the available operations through the OpenAPI description at https://docs.example.com/openapi.json, or list every page at https://docs.example.com/api/docs/pages.json.",
+  "status": 404,
+  "title": "API route not found",
+  "type": "about:blank"
+}
+```
+
+## OpenAPI-Beschreibung
+
+Das **OpenAPI-Dokument** unter `/openapi.json` wird bei jedem Build aus deiner Konfiguration erzeugt und beschreibt daher nur das, was die deployte Site tatsächlich ausliefert: jeden JSON-Endpunkt mit einer eindeutigen `operationId`, typisierten Parametern und Response-Schemas, dazu die Text-Oberflächen daneben — die [`.md`-Spiegel](/docs/discoverability/markdown), [`llms.txt`](/docs/discoverability/llms-txt) und `llms-full.txt`, [`agent-readability.json`](/docs/discoverability/agent-discovery#agent-readability) — sowie den [MCP-Endpunkt](/docs/discoverability/mcp), wenn er aktiviert ist. Frameworks, die aus einer OpenAPI-Beschreibung Tools bauen, erhalten dieselbe Reichweite wie ein MCP-Client. Das Dokument ist aus dem [API-Katalog](/docs/discoverability/agent-discovery#api-catalog), dem [Readability-Manifest](/docs/discoverability/agent-discovery#agent-readability), dem `Link`-Header der Startseite als `rel="service-desc"` und aus `llms.txt` verlinkt.
+
+Nichts davon berührt deine eigene [API-Referenz](/docs/advanced/api-reference): Eine dokumentierte Spec wird in Seiten gerendert, niemals unter `/openapi.json` ausgeliefert, und der Katalog listet beides. Eine `public/openapi.json`, die du selbst ausspielst, übernimmt diese Route (die JSON-Endpunkte bleiben bestehen). Der `/api/…`-Catch-all tritt zurück, wenn ein Dokumentationsbereich aus dem `/api`-Namespace ausgeliefert wird (`content/api/overview.md`) oder eine eigene Seite eine Rest-Route unter `/api/` besetzt — diese Seiten gewinnen also weiterhin.
+
+## Abschalten
+
+Setze `ai.api` auf `false`, um nichts davon zu veröffentlichen:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  api: false,
+}
+```

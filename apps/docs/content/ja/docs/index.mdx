@@ -46,7 +46,7 @@ Blume は Astro と Vite の上に構築され、デフォルトで静的 HTML �
 
 - **コンポーネント** — コールアウト、カード、ステップ、タブ、アコーディオン、バッジ、ファイルツリー、パラメータテーブルが、MDX で[インポート不要](/docs/content/components)で使えます。
 - **ローカル検索** — Orama が開発環境でも本番環境でも動作します。大規模サイト向けには Pagefind がフラグ 1 つで利用できます。ホスト型インデックスは不要です。
-- **AI** — [`llms.txt`、生の Markdown URL、OpenAPI 記述付きの JSON API、Copy as Markdown、Open in chat、Ask AI アシスタント、ホスト型 MCP サーバー](/docs/discoverability)。
+- **AI** — [`llms.txt`、生の Markdown URL、OpenAPI 記述付きの JSON API、Copy as Markdown、Open in chat、ホスト型 MCP サーバー](/docs/discoverability)。さらにオプションの [Ask AI アシスタント](/docs/configuration/ask-ai)。
 - **ナビゲーション** — ファイルから推論され、`meta.ts` や設定で調整できます。
 - **SEO** — メタデータ、Open Graph 画像、RSS フィード、JSON-LD を[標準搭載](/docs/discoverability)。
 - **カスタマイズ** — コンポーネントのオーバーライド、React アイランド、カスタムページ、テーマトークン、そして `blume add` によるソースコンポーネントレジストリ。
@@ -65,8 +65,8 @@ Blume CLI はコンテンツを検出し、コンテンツグラフを構築し�
   <Card title="コンポーネント" href="/docs/content/components" icon="folder">
     組み込みのコンポーネントライブラリを見てみましょう。
   </Card>
-  <Card title="AI" href="/docs/discoverability" icon="lightbulb">
-    `llms.txt` と Ask AI アシスタントを提供しましょう。
+  <Card title="発見しやすさ" href="/docs/discoverability" icon="lightbulb">
+    `llms.txt`、ソーシャルカード、MCP サーバーを提供しましょう。
   </Card>
   <Card title="CLI" href="/docs/reference/cli" icon="rocket">
     すべての `blume` コマンドとフラグ。

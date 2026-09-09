@@ -1,0 +1,114 @@
+---
+title: Open Graph 画像
+description: >-
+  すべてのページ向けに生成される 1200×630 のソーシャルカード — ブランディング、カードのレイヤー、非ラテン文字向けフォント、ページ単位のオーバーライドについて。
+---
+
+Blume は、すべてのページに対してビルド時に 1200×630 のソーシャルカードをレンダリングできます。[Takumi](https://takumi.kane.tw) のおかげでヘッドレスブラウザは不要で、ビルドは高速なままです。[`deployment.site`](/docs/deployment) が設定されているか自動検出された場合はデフォルトで有効になり（`og:image` の URL はクローラーにとって有用であるために絶対 URL である必要があります）、そうでない場合は無効です。どちらの挙動も `enabled` で上書きできます:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: { enabled: true }, // or false to opt out even with a site set
+}
+```
+
+## 生成されるカードをブランディングする
+
+ローカルの SVG とカラーパレットを設定して、生成されるカードをブランドに合わせましょう。ロゴは `public/` またはプロジェクトルートに配置できます。パレットの値を省略すると、その項目はデフォルトのままになります。
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    logo: "/logo/og.svg",
+    palette: {
+      accent: "#ff5410",
+      background: "#1d1d1d",
+      foreground: "#fff6f2",
+      muted: "#a6a19f",
+      border: "#323232",
+    },
+  },
+}
+```
+
+デフォルトでは、各カードはコンテンツとテーマから導出されます。見出しには**ページタイトル**、サブタイトルには**ページの説明**（`og:description` と同じテキストなので、`description` よりも `seo.description` が優先されます）、アイブロウには**サイトタイトル**、マークにはテーマの**アクセント**が使われます。画像は各ルートに対応する形で `/og/<slug>.png` から配信され、サーバーモードでも静的ファイルとしてプリレンダリングされます:
+
+| ページのルート   | 画像の URL              |
+| ---------------- | ----------------------- |
+| `/`              | `/og/index.png`         |
+| `/quickstart`    | `/og/quickstart.png`    |
+| `/guides/deploy` | `/og/guides/deploy.png` |
+
+任意のページで生成されたカードを上書きするには、`seo.image` を使います。`public/` 内のファイルまたは外部 URL を指定できます。これは生成されたカードよりも優先され、`og` が無効な場合でも機能するため、カスタム画像と生成画像を組み合わせて使えます:
+
+```yaml lineNumbers
+---
+title: Pricing
+seo:
+  image: /og/pricing-custom.png
+---
+```
+
+:::note
+パレットの各色には任意の CSS カラーを指定できます — 16 進数、`oklch(…)`、`rgb(…)` などです。アクセントには、[`theme.accent`](/docs/configuration/theming#accent) と同じく名前付きプリセット（`blue`、`teal` など）も指定できます。レンダラーが解釈できない色を指定した場合、デフォルト色のカードが黙って出力されるのではなく、ビルドが失敗します。
+:::
+
+ページタイトルやサイトタイトルに含まれる絵文字は [Twemoji](https://github.com/jdecked/twemoji) のグリフとしてレンダリングされ、カードのレンダリング中に CDN から取得されます。そのため、タイトルに絵文字を含むビルドにはネットワークアクセスが必要です。各グリフは、いくつのページで使われていてもビルドごとに 1 回だけ取得されます。
+
+## カードのレイヤーを表示・非表示・上書きする
+
+見出しに加えて、カードには 3 つのオプションレイヤーがあります。左上の**ブランドマーク**（ロゴ、またはサイトタイトルの頭文字を配したアクセントタイル）、見出しの下の**サブタイトル**（ページの `description`、それがないページではサイトの `description`）、そしてリポジトリスラッグ（`github` から取得）とサイトの URL を含む**フッター**です。サイトの URL はデプロイ先サイトのホストに [`deployment.base`](/docs/deployment#subpath-deploys) を加えたもので、GitHub Pages のプロジェクトサイトであれば `user.github.io/repo` と表示されます。いずれも任意の文字列で上書きでき、`false` を指定すると非表示になります:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    site: "docs.acme.com", // footer URL text, or false to hide it
+    description: false, // hide the subtitle on every card; a string replaces the site fallback
+    logo: false, // no brand mark at all — not even the initial tile
+  },
+}
+```
+
+## カードのフォント
+
+デフォルトでは、カードは Takumi の組み込みフォントでレンダリングされます。このフォントはラテン文字のグリフしかカバーしていないため、他の文字体系（日本語、中国語、韓国語、アラビア語など）のタイトルは豆腐（空の四角）として表示されてしまいます。
+
+**[`theme.fonts`](/docs/configuration/theming#fonts) を設定すれば、カードもそれに従います。** 設定で独自のフォントを指定すると、生成されるカードは見出しをディスプレイフォントで、説明とフッターをボディフォントで自動的にレンダリングするため、共有リンクがサイトと一致します。非ラテン文字のカバーも含め、ここで設定すべきことは何もありません。（Google 以外のプロバイダーのファミリーはスキップされます — カードレンダラーは Google Fonts からしか取得できません — が、ローカルのフォントファイルは利用できます。）
+
+サイトとは異なるフォントをカードで使いたい場合や、テーマに手を加えずに文字体系のカバー範囲を追加したい場合は、`og.fonts` を明示的に設定します。この設定は常にテーマ由来のフォントより優先されます:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    fonts: [
+      "Noto Sans JP",
+      { name: "Inter", weight: [400, 700] },
+      { name: "Berkeley Mono", src: "./fonts/BerkeleyMono-Regular.woff2" },
+    ],
+  },
+}
+```
+
+各エントリには、Google Fonts のファミリー名、`weight`（数値、リスト、または `"100..900"` のような可変範囲）と `style`（`"normal"`、`"italic"`、またはその両方）を指定するオブジェクト、あるいはローカルのフォントファイルを指定できます。ローカルファイルの場合、`src` はプロジェクトルートから解決され、ファイル自身のメタデータに任せたくない場合は `weight` と `style` を任意で指定できます。
+
+Google のファミリーはビルド時に取得されるため、それらを使うビルドにはネットワークアクセスが必要です。また、レンダラーは各タイトルが実際に使用するグリフのサブセットのみを取得します。フォールバックはグリフ単位で行われるため、ファミリーを追加しても、他のフォントで描画できないグリフにしか影響しません。
+
+`og.fonts: []` と明示的に指定すると完全にオプトアウトでき、`theme.fonts` が設定されていてもカードは組み込みフォントのままになります。
+
+## カスタムページのタイトル
+
+カスタム [`.astro` ページ](/docs/advanced/custom-pages) には読み取るフロントマターがないため、生成されるカードのタイトルはルートの最後の URL セグメントを人間向けに整形したものになります。`/getting-started` は「Getting Started」になりますが、`/cli` は「Cli」になってしまいます。こうしたカードには `og.titles` でルートをキーとして明示的に名前を付けられます（`"/"` はホームを指し、指定しない場合そのカードにはサイトタイトルが表示されます）:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: {
+    titles: {
+      "/cli": "CLI",
+    },
+  },
+}
+```
+
+エントリはカスタムページにのみ適用されます。コンテンツページのカードは常にページタイトルから見出しを取得するため、そちらはフロントマターでタイトルを付け直してください。
+
+`seo.image` はフロントマターなので、Markdown と MDX のコンテンツにしか適用されません。カスタム [`.astro` ページ](/docs/advanced/custom-pages) に独自のソーシャル画像を設定するには — マーケティング用のホームページやランディングページ、そしてホームページだけに専用の共有画像を設定する方法として — `PageLayout` に `ogImage` プロパティを渡してください。

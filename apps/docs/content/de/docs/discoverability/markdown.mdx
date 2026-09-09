@@ -1,0 +1,77 @@
+---
+title: Markdown für Agenten
+description: >-
+  Das rohe Markdown jeder Seite unter einer .md-URL oder per Accept-Content-Negotiation, eigene Serializer für deine eigenen Komponenten und die Aktionen „Als Markdown kopieren" und „Im Chat öffnen", die Leser gratis bekommen.
+---
+
+HTML ist für Browser. Agenten und LLMs kommen besser mit dem Markdown zurecht, in dem deine Seiten geschrieben sind — weniger Tokens, kein Drumherum und Komponenten in einer Form, die ein Modell lesen kann. Blume liefert dieses Markdown für jede Seite aus, in der Entwicklung wie in der Produktion, ganz ohne Konfiguration.
+
+## Rohes Markdown
+
+Hänge `.md` oder `.mdx` an die URL einer beliebigen Seite an, um ihren rohen Markdown-Quelltext abzurufen — perfekt für LLMs, Coding-Agenten und „Als Markdown kopieren"-Workflows.
+
+| URL               | Liefert                                        |
+| ----------------- | ---------------------------------------------- |
+| `/quickstart`     | Die gerenderte Seite                           |
+| `/quickstart.md`  | Reines Markdown, mit konvertierten Komponenten |
+| `/quickstart.mdx` | Den rohen MDX-Quelltext, exakt wie geschrieben |
+
+Verschachtelte Routen funktionieren genauso (`/content/syntax.md`), und die Startseite wird unter `/index.md` ausgeliefert.
+
+Die `.md`-Variante _reduziert_ Komponenten auf reines Markdown für Konsumenten, die kein JSX interpretieren können: `<TypeTable>` wird zu einer Markdown-Tabelle, `<Callout>` zu einem beschrifteten Blockzitat, `<Steps>` zu einer nummerierten Liste, `<Tabs>` zu fett beschrifteten Abschnitten, `<Card>` zu seinem Titel als Link über seinem Inhalt (und `<CardGroup>` zu den Karten, die sie enthält) und `<YouTube>` zu einem Link. Auch die Komponenten, aus denen eine generierte [API-Referenzseite](/docs/advanced/api-reference) besteht, werden reduziert: `<Operation>` wird zum Endpunkt in der Notation der jeweiligen Spezifikation (`GET /pets/{id}`, `SEND user/signup`, `query pets`) mit einer Deprecation-Markierung, `<ApiTagOperations>` zu einer Liste dieser Endpunkte, verlinkt auf ihre Seiten und mit ihren Zusammenfassungen, und `<ApiOverview>` zur Version und den Basis-URLs der API — so weiß ein Agent, der eine Referenzseite liest, was er aufrufen muss, und die Seitensuche findet den Pfad eines Endpunkts. Props werden mit dem `frontmatter` der Seite im Scope ausgewertet, sodass ein Prop wie `title={frontmatter.status}` denselben Wert ergibt, den auch die gerenderte Seite zeigt. Alles, was sich nicht originalgetreu konvertieren lässt — eine eigene Komponente oder ein aus einem Import berechnetes Prop — bleibt unverändert, und Komponenten-Markup innerhalb von Code-Blöcken wird nie angefasst. Dieselbe Konvertierung gilt für [`llms-full.txt`](/docs/discoverability/llms-txt) und das `get_page`-Tool des [MCP-Servers](/docs/discoverability/mcp), sodass jede an Agenten gerichtete Oberfläche sauberes Markdown liefert. Wenn du den untransformierten Quelltext möchtest, nutze die `.mdx`-Variante.
+
+### Content Negotiation
+
+Agenten müssen die `.md`-Konvention nicht kennen: Ruft man die eigene URL einer Seite mit einem [`Accept: text/markdown`](https://acceptmarkdown.com)-Header ab, wird die Markdown-Variante unter derselben Adresse ausgeliefert, mit `Vary: Accept`, damit Caches beide auseinanderhalten. Der Dev-Server berücksichtigt den Header von Haus aus, und ein [Vercel- oder Cloudflare-Server-Build](/docs/deployment#server-rendering) verdrahtet dieselbe Negotiation automatisch ins Deployment — Routing-Regeln auf Vercel, ein generierter Worker auf Cloudflare — ohne jede Konfiguration. Die Startseite verhandelt immer, selbst wenn sie eine eigene Landingpage statt einer Inhaltsseite ist: Ihr Markdown-Pendant fällt auf den [`llms.txt`](/docs/discoverability/llms-txt)-Index zurück, sodass ein Agent, der die Site-Wurzel nach Markdown fragt, die maschinenlesbare Karte der Site erhält. Markdown-Antworten tragen außerdem einen `x-markdown-tokens`-Header — eine geschätzte Token-Anzahl (~4 Zeichen pro Token), nach der Konvention von [Cloudflares Markdown for Agents](https://developers.cloudflare.com/fundamentals/reference/markdown-for-agents/) — auf jeder Oberfläche, auf der Blume die Response-Header kontrolliert: dem Dev-Server, servergerenderten Antworten und der verhandelten Startseite auf Vercel und Cloudflare. Andere Deploy-Ziele liefern vorgerenderte Seiten aus einer statischen Schicht ohne Hook zur Request-Zeit aus, dort rufen Agenten also die `.md`-URL direkt ab; das [Agent-Readability-Manifest](/docs/discoverability/agent-discovery#agent-readability) weist `contentNegotiation` nur auf Deployments aus, die den Header berücksichtigen.
+
+Auch fehlende Seiten verhandeln. Jeder Build erzeugt eine Markdown-[404-Seite](/docs/advanced/custom-pages#404-page) unter `/404.md` — die Nicht-gefunden-Meldung, gefolgt von Wiederherstellungslinks zu jedem Abschnitt der obersten Ebene, zur Sitemap und zu `llms.txt` — und auf Vercel erhält eine Anfrage an eine nicht existierende URL, die Markdown bevorzugt, oder jede `.md`-URL ohne dahinterliegende Seite, diesen Inhalt mit einem echten `404`-Status statt der HTML-Hülle.
+
+### Eigene Komponenten-Serializer
+
+Gib deinen eigenen Komponenten eine Markdown-Form mit `ai.markdownComponents` — einer Zuordnung von JSX-Name zu Serializer. Jeder Serializer erhält die `props` der Komponente (statisch aus den MDX-Attributen ausgewertet, mit dem `frontmatter` der Seite im Scope), ihre `children` (bereits auf Markdown reduziert) und die `frontmatter`-Daten der Seite und gibt den Ersatz zurück — oder `null`, um das JSX unverändert zu lassen:
+
+```ts blume.config.ts lineNumbers
+import { defineConfig } from "blume";
+import type { ComponentMarkdown } from "blume";
+
+const chart: ComponentMarkdown = ({ props }) =>
+  `![${props.title}](/charts/${props.slug}.png)`;
+
+export default defineConfig({
+  ai: {
+    markdownComponents: {
+      Chart: chart,
+    },
+  },
+});
+```
+
+Für Container-Komponenten extrahiert `childComponents("Name")` direkte Kinder anhand ihres Tags — genauso, wie der eingebaute `<Steps>`-Serializer seine `<Step>`-Elemente einsammelt — und `childBlocks()` gibt jedes direkte Kind der Reihe nach zurück, Komponenten wie Fließtext, jeweils bereits zu einem Markdown-Block reduziert (der eingebaute `<CardGroup>`-Serializer ist einfach nur diese Blöcke, verbunden durch Leerzeilen). Ein Eintrag mit gleichem Namen ersetzt einen eingebauten Serializer, du kannst also umgestalten, wie `<Callout>` reduziert wird — oder `null` zurückgeben, um eine Komponente ganz auszunehmen.
+
+Serializer leben in `blume.config.ts`, nicht in `components.tsx`: Die Konfigurationsdatei wird zur Build-Zeit ausgeführt, während die Komponentendatei nur statisch analysiert wird (sie darf `.astro`-Dateien importieren, die außerhalb des Site-Builds nicht laufen können). Deine Komponenten selbst bleiben exakt wie zuvor in `components.tsx` registriert — `markdownComponents` fügt nur ihre an Agenten gerichtete Markdown-Form hinzu.
+
+## Als Markdown kopieren
+
+Jede Seite trägt eine Aktion **Als Markdown kopieren** — in den [Seitenaktionen](/docs/content/navigation#page-actions) unterhalb des Inhaltsverzeichnisses —, die das rohe Markdown der Seite in die Zwischenablage kopiert. Es ist derselbe Quelltext, der unter der [`.md`-URL](#raw-markdown) oben ausgeliefert wird, bereit zum Einfügen in ein LLM, ein Issue oder deine Notizen. Sie ist auf jeder Seite verfügbar, in der Entwicklung wie in der Produktion, ganz ohne Konfiguration.
+
+Wo die Clipboard-API nicht verfügbar ist oder der Browser sie verweigert — In-App-Browser, WebViews, unsichere Origins —, fällt die Aktion auf den alten Kopierbefehl zurück, und wenn nichts in der Zwischenablage landet, meldet der Button **Kopieren fehlgeschlagen** (lokalisiert über `actions.copyFailed`), statt stumm zu bleiben. Derselbe Fallback steht hinter jedem Kopier-Button, den Blume rendert.
+
+## Im Chat öffnen
+
+Die Aktion **Im Chat öffnen** öffnet die aktuelle Seite in einem KI-Assistenten — v0, ChatGPT, Claude, T3 Chat, Scira oder Cursor — vorausgefüllt mit einem Prompt, der ihn auf das rohe Markdown der Seite verweist, damit er Fragen zu dem beantworten kann, was du gerade liest:
+
+> Lies `https://your-site/this-page.md`, damit ich dir Fragen zu dieser Seite stellen kann.
+
+Wie „Als Markdown kopieren" braucht sie keinerlei Einrichtung. Der Assistent ruft die Seite über ihre öffentliche URL ab, sie funktioniert also, sobald die Seite deployt ist.
+
+Der Prompt ist Teil des [UI-Wörterbuchs](/docs/content/i18n#translated-ui) (`actions.openInChatPrompt`), lokalisierte Sites senden ihn also in ihrer Sprache, und `i18n.ui` kann die Formulierung überschreiben — behalte dabei den Platzhalter `{url}`, der durch die Roh-Markdown-URL der Seite ersetzt wird.
+
+Um die Aktion anzupassen, setze `ai.openInChat`. `false` blendet sie vollständig aus, und ein Array von Provider-Schlüsseln — `"v0"`, `"chatgpt"`, `"claude"`, `"t3"`, `"scira"`, `"cursor"` — zeigt genau diese Provider, in der von dir angegebenen Reihenfolge:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  openInChat: ["claude", "chatgpt", "cursor"],
+}
+```
+
+Um einen fertig kopierbaren Prompt direkt in deine Inhalte einzubetten — statt einer seitenweiten Aktion — nutze die [Prompt-Komponente](/docs/content/components#prompt), die eine beschriftete Zeile mit einem **Prompt kopieren**-Button und einem optionalen In-Cursor-öffnen-Link rendert.

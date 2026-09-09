@@ -1,0 +1,197 @@
+---
+title: エージェントによる検出
+description: >-
+  エージェントが推測に頼らず、機械可読なサーフェスを見つける方法 — エージェント可読性マニフェスト、Link ヘッダー、RFC 9727 API カタログ、WebMCP、公開されたスキル、DNS ベースの検出、そして Web Bot Auth キー。
+---
+
+`llms.txt`、Markdown ミラー、JSON API、MCP サーバーを公開しても、それは仕事の半分に過ぎません — エージェントはそれらを見つけなければならないからです。Blume は、エージェントが実際に探索する規約を通じてサーフェス全体を告知します。サイトルートのマニフェスト、`Link` ヘッダーと `<link>` タグ、well-known ファイル、そしてブラウザ自身のモデルコンテキストです。ここに書かれているものはすべてデフォルトで有効になっており、すでに有効にしている機能から導出されます。
+
+## エージェント可読性
+
+Blume はサイトルートに **`/agent-readability.json`** マニフェストを書き出し、このセクション全体で説明されているエージェント向けサーフェスをインデックス化します — これにより、エージェントは規約を推測したり HTML をスクレイピングしたりせず、単一のフェッチで検出できます。`llms.txt` と同様に、デフォルトで有効です:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  agentReadability: true,
+}
+```
+
+マニフェストには有効にしたものだけが列挙されます — [生の Markdown](/docs/discoverability/markdown) ミラーパターン、[JSON API](/docs/discoverability/json-api) とその OpenAPI 記述、[`llms.txt`](/docs/discoverability/llms-txt) と `llms-full.txt`、[MCP サーバー](/docs/discoverability/mcp) とその検出ドキュメント、[Ask AI](/docs/configuration/ask-ai) エンドポイント、[サイトマップ](/docs/discoverability/sitemap-and-robots#sitemap)、[RSS フィード](/docs/discoverability/rss) — に加えて、サイト名、説明、ソースリポジトリ、[content-signal](/docs/discoverability/sitemap-and-robots#content-signals) 利用ポリシーが含まれます。URL は [`deployment.site`](/docs/deployment) が設定されている場合は絶対 URL に、そうでない場合はルート相対になります:
+
+```json agent-readability.json
+{
+  "artifacts": {
+    "markdown": {
+      "contentNegotiation": "text/markdown",
+      "pattern": "https://docs.example.com/{route}.md"
+    },
+    "api": {
+      "openapi": "https://docs.example.com/openapi.json",
+      "pages": "https://docs.example.com/api/docs/pages.json",
+      "search": "https://docs.example.com/api/docs/search"
+    },
+    "llmsFullTxt": "https://docs.example.com/llms-full.txt",
+    "llmsTxt": "https://docs.example.com/llms.txt",
+    "mcp": {
+      "discovery": "https://docs.example.com/.well-known/mcp.json",
+      "url": "https://docs.example.com/mcp"
+    }
+  },
+  "description": "Docs for the Acme API.",
+  "generator": "blume@1.0.0",
+  "name": "Acme Docs",
+  "site": "https://docs.example.com",
+  "contentUsage": { "search": true, "ai-input": true, "ai-train": true },
+  "repository": "https://github.com/acme/docs"
+}
+```
+
+`contentNegotiation` フィールドは、デプロイされたサイトが実際に `Accept: text/markdown` ヘッダーを尊重する場合にのみ現れます — [コンテンツネゴシエーション](/docs/discoverability/markdown#content-negotiation)を参照してください。それ以外のデプロイでは、マニフェストは `.md` ミラーパターンのみを告知します。
+
+`seo.agentReadability` を `false` に設定するとスキップされます。また、独自の `public/agent-readability.json` を配置すれば、それが使われます — Blume が `public/` に置いたファイルを上書きすることはありません。
+
+## 検出用の Link ヘッダー
+
+サイトを探索するエージェントは、マニフェストを探すべきだとは知りません — そのため Blume は、IANA 登録済みのリレーションタイプを使って、ホームページの [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) `Link` レスポンスヘッダーでもマニフェストを告知します:
+
+```http
+Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json",
+  </openapi.json>; rel="service-desc"; type="application/json",
+  </agent-readability.json>; rel="describedby"; type="application/json",
+  </llms.txt>; rel="describedby"; type="text/plain",
+  </index.md>; rel="alternate"; type="text/markdown"
+```
+
+各エントリは、その機能が有効な場合にのみ現れます。`alternate` リンクはホームページの Markdown ミラーを指します — ホームルートがコンテンツページの場合はそのページ自身の[生の Markdown](/docs/discoverability/markdown)、ランディングページの場合は合成された `llms.txt` フォールバックです。`service-desc` リンク（[RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)）は [JSON API](/docs/discoverability/json-api) の OpenAPI 記述を、`api-catalog` は[生成された API カタログ](#api-catalog)を指します。このヘッダーは Blume が制御するすべてのサーフェスに載ります: 開発サーバー（`curl -I localhost:4321` で確認できます）、出力される `_headers` ファイル経由の静的ビルド（Netlify と Cloudflare）、そしてデプロイのルーティングルール経由の Vercel サーバービルドです。
+
+とはいえ、すべてのエージェントがルートから入ってくるわけではありません — 検索結果や共有リンクをたどるエージェントは深い階層のページに着地し、ホームページのヘッダーを目にすることはありません。そのため、レンダリングされるすべてのページも、同じ IANA 登録済みリレーションを使って、HTML の `<head>` に同じ検出リンクを含めます:
+
+```html
+<link
+  rel="describedby"
+  href="/agent-readability.json"
+  type="application/json"
+/>
+<link rel="describedby" href="/llms.txt" type="text/plain" />
+<link rel="alternate" href="/docs/example.md" type="text/markdown" />
+```
+
+ここでの `alternate` リンクは*そのページ自身*の[生の Markdown ミラー](/docs/discoverability/markdown)を指すため、エージェントは着地した HTML からトークン効率の良いバージョンへ直接ジャンプできます。head 内のリンクはプリレンダリングされた HTML と一緒に配信されるため、`_headers` を無視しカスタムレスポンスヘッダーをまったく送信できないホスト（GitHub Pages、S3）でも機能します — エージェントがどのページから入ってきても同様です。
+
+## API カタログ
+
+サイトが API を公開している場合、Blume は `/.well-known/api-catalog` に [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) API カタログを生成します — これはエージェントがドメインだけから API を列挙できるようにする[リンクセット](https://www.rfc-editor.org/rfc/rfc9264)で、すべてのビルドサーフェスで登録済みの `application/linkset+json` メディアタイプとともに配信されます。設定は不要です: カタログは `blume.config.ts` にすでにある内容から導出されます。各 [OpenAPI または AsyncAPI リファレンス](/docs/advanced/api-reference)は、レンダリングされたドキュメントのルートをアンカーとするエントリになり、`service-doc` がそのドキュメントを指し、仕様がフェッチ可能な URL にある場合は `service-desc` がその仕様を指します。サイト自身の [JSON API](/docs/discoverability/json-api) は `/openapi.json` によって記述されるエントリになり、[MCP サーバー](/docs/discoverability/mcp)はその検出ドキュメントをサービス記述とするエントリになります:
+
+```json .well-known/api-catalog
+{
+  "linkset": [
+    {
+      "anchor": "https://docs.example.com/reference",
+      "service-doc": [
+        { "href": "https://docs.example.com/reference", "type": "text/html" }
+      ],
+      "service-desc": [{ "href": "https://api.example.com/openapi.json" }]
+    },
+    {
+      "anchor": "https://docs.example.com/api/docs",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
+    },
+    {
+      "anchor": "https://docs.example.com/mcp",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/.well-known/mcp.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
+    }
+  ]
+}
+```
+
+API リファレンスがなく、MCP サーバーもなく、[JSON API](/docs/discoverability/json-api) も無効になっているサイトでは、カタログは出力されません — 中身が何もないからです。他の箇所と同様に、自分で配置した `public/.well-known/api-catalog` ファイルが生成されたものより優先されます。
+
+## WebMCP
+
+[WebMCP](https://webmachinelearning.github.io/webmcp/) は、ページがエージェント型ブラウザに直接ツールを登録できるようにする新興のブラウザ API です — 別途サーバー接続を用意する必要はありません。Blume の各ページは、ドキュメントの読み取り専用サーフェスをページのモデルコンテキストに登録します: `search_docs`（サイト検索）、`get_page`（ページの[生の Markdown](/docs/discoverability/markdown)）、`list_pages`（[`llms.txt`](/docs/discoverability/llms-txt) インデックス）です。スクリプトは非常に小さく、ツールが実際に呼び出されるまで検索機構を読み込まず、この API を持たないブラウザでは静かに何もしません — 今日それは [Chrome の早期プレビュー](https://developer.chrome.com/blog/webmcp-epp)以外のすべてのブラウザです。変動中の仕様が公開するいずれかのサーフェス（`navigator.modelContext` または `document.modelContext`）に対して、`provideContext` またはツールごとの `registerTool` 経由で登録します。
+
+デフォルトで有効です。オプトアウトするには `webmcp: false` を設定します:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  webmcp: false,
+}
+```
+
+## スキルの検出
+
+プロジェクトが[エージェントスキル](https://agentskills.io)を同梱している場合 — [Blume リポジトリ自体がそうです](/docs/advanced/skills) — `ai.skills` をそれらを含むディレクトリに向けると、ビルドは [Agent Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc) に従ってそれらを検出用に公開します:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  skills: "./skills",
+}
+```
+
+パスはプロジェクトルートを基準に解決され、`SKILL.md` を含む各サブディレクトリが公開スキルになります。`SKILL.md` 単体のスキルは `/.well-known/agent-skills/<name>/SKILL.md` にそのままコピーされます（`type: "skill-md"`）。補助リソース（`scripts/`、`references/`、`assets/`）を持つスキルは、展開後に相対参照が解決できるよう決定論的な `.tar.gz` にバンドルされ（`type: "archive"`）、スクリプトの実行ビットも保持されます。`/.well-known/agent-skills/index.json` にある検出インデックスには v0.2.0 の `$schema` と、スキルごとに名前、タイプ、説明（`SKILL.md` のフロントマターから）、成果物の URL、そしてクライアントがダウンロードを検証するための SHA-256 ダイジェストが含まれます。
+
+`name`/`description` が欠けている、または仕様に反しているスキルは、壊れた状態で公開される代わりにビルド警告とともにスキップされます。また、自分で配置した `public/.well-known/agent-skills/index.json` はサーフェス全体を引き継ぎます。公開されたスキルは [`llms.txt`](/docs/discoverability/llms-txt#generated-sections) にも列挙されます。
+
+## DNS ベースの検出（DNS-AID）
+
+[DNS for AI Discovery](https://datatracker.ietf.org/doc/draft-mozleywilliams-dnsop-dnsaid/) は、well-known な DNS エントリポイントで ServiceMode の [SVCB/HTTPS レコード](https://www.rfc-editor.org/rfc/rfc9460)を照会することで、HTTP リクエストを一度も送らずにエージェントがサイトの AI サーフェスを検出できるようにする、新興の IETF ドラフトです。DNS レコードはビルドではなくゾーンに存在するため、これは Blume が代わりに公開できない唯一の検出サーフェスです — 代わりに、DNS プロバイダーでレコードを追加してください:
+
+```txt
+_index._agents.docs.example.com. 3600 IN HTTPS 1 docs.example.com. alpn=h2
+```
+
+プロバイダーが提供している場合は `HTTPS` レコードタイプを使用してください（Vercel DNS は提供していますが、素の `SVCB` タイプはサポートしていません）。そうでない場合は、`alpn` と `port` パラメータを持つ ServiceMode の `SVCB` レコードを使用します。ドラフトはまた、検証を行うリゾルバが認証済みの応答を返せるよう、DNSSEC でゾーンに署名することを推奨しています — Cloudflare のようなプロバイダーはワンクリックで有効化できますが、一部（Vercel DNS を含む）はまったくサポートしていません。
+
+`blume audit --url <origin>` がこれをチェックしてくれます: [`deployment.site`](/docs/deployment) が設定されている場合、ネットワーク層は DNS-over-HTTPS 経由でエントリポイントを照会し、レコードが存在しなければ公開すべき正確なレコードを、加えて応答が DNSSEC で認証されているかどうかを報告します。ネットワークがパブリックリゾルバ（Google、Cloudflare）をブロックしている場合は、`BLUME_DOH_URL` を設定して自分のリゾルバを参照させてください。
+
+## Web Bot Auth
+
+[Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) は逆方向に働きます: エージェントがあなたのドキュメントを読むことではなく、**あなたの組織のエージェントが**他所へリクエストを送る際に**自らを識別する**ことに関するものです。あなたのエージェントは [HTTP Message Signatures](https://www.rfc-editor.org/rfc/rfc9421) でリクエストに署名し、受け取る側のサイトはあなたのドメインで公開されている公開鍵ディレクトリに対してそれを検証します。組織がエージェントを運用しており、Blume サイトがそのエージェントが名乗るドメインにある場合は、その公開鍵を公開してください:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  webBotAuth: {
+    keys: [{ kty: "OKP", crv: "Ed25519", x: "JrQLj5P_89iXES9-vFgrIy29c…" }],
+  },
+}
+```
+
+すると Blume は、すべてのビルドサーフェスで `/.well-known/http-message-signatures-directory` に登録済みメディアタイプ付きで JWKS を配信します。このディレクトリは定義上パブリックなので、設定は公開鍵のみを受け付けます — 秘密要素（`d`、`p`、`q`、…）を含む JWK は、漏洩した認証情報を配信する代わりにエラーで検証に失敗します。Ed25519 のペアは次のように生成します:
+
+```bash
+node -e 'const { generateKeyPairSync } = require("node:crypto"); const { publicKey, privateKey } = generateKeyPairSync("ed25519"); console.log("public: ", JSON.stringify(publicKey.export({ format: "jwk" }))); console.log("private:", JSON.stringify(privateKey.export({ format: "jwk" })))'
+```
+
+公開 JWK は上記の設定に入れ、秘密鍵は署名エージェントが動作する場所（シークレットマネージャーであり、決してリポジトリではありません）に置きます。組織がエージェントを運用していない場合は、これをスキップしてください — 空のディレクトリは検証する価値のあるものを何も告知しません。
+
+`blume.config.ts` はビルド時に実行されるため、鍵をハードコードする必要はありません — ビルド時の環境変数から読み込めば、設定を鍵の塊から解放し、コミットなしでローテーションできます:
+
+```ts blume.config.ts lineNumbers
+const webBotAuthKey = process.env.WEB_BOT_AUTH_PUBLIC_JWK;
+
+export default defineConfig({
+  ai: {
+    webBotAuth: {
+      keys: webBotAuthKey ? [JSON.parse(webBotAuthKey)] : [],
+    },
+  },
+});
+```
+
+この変数がない環境ではディレクトリは公開されません。また、この方法で読み込まれた鍵はインラインの鍵とまったく同様に検証されます — 秘密要素のチェックも含みます。（公開鍵は秘密情報ではないため、インラインでコミットしても同じく問題ありません。環境変数は使い勝手のための選択であって、セキュリティ上の選択ではありません。）

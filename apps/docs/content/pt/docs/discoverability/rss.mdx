@@ -1,0 +1,25 @@
+---
+title: Feeds RSS
+description: >-
+  Um feed por tipo de conteúdo com data — blog e changelog por padrão — servido em /<type>/rss.xml e anunciado automaticamente para leitores de feed.
+---
+
+O Blume cria um feed RSS para cada tipo de conteúdo em `rss.types` — `blog` e `changelog` por padrão — que tenha páginas, servido em `/<type>/rss.xml`. Veja [Feeds](/docs/content#feeds) para escrever entradas de blog e changelog com datas.
+
+```ts blume.config.ts lineNumbers
+seo: {
+  rss: {
+    enabled: true,
+    types: ["blog", "changelog"],
+    limit: 50,
+  },
+}
+```
+
+| Opção | Padrão | Descrição |
+| --- | --- | --- |
+| `enabled` | `true` | Gera os feeds. |
+| `types` | `["blog", "changelog"]` | Tipos de conteúdo que ganham um feed cada. |
+| `limit` | `50` | Máximo de itens por feed, do mais recente ao mais antigo. |
+
+O Blume injeta tags `<link rel="alternate">` para que navegadores e leitores de feed descubram os feeds automaticamente, e os lista no [manifesto de legibilidade para agentes](/docs/discoverability/agent-discovery#agent-readability) para que os agentes também os encontrem. Os links dos itens são absolutos quando [`deployment.site`](/docs/deployment) está definido.

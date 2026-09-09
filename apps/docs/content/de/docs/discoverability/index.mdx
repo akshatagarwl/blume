@@ -1,0 +1,49 @@
+---
+title: SEO und AEO
+description: >-
+  Wie eine Blume-Site gefunden wird — von Suchmaschinen und sozialen Plattformen auf der einen Seite, von Coding-Agents und KI-Assistenten auf der anderen — und wo jede Oberfläche konfiguriert wird.
+---
+
+Suchmaschinen und KI-Agents wollen dasselbe von deiner Dokumentation: eine saubere, maschinenlesbare Beschreibung dessen, was jede Seite sagt, wie die Seiten zusammenhängen und wer sie veröffentlicht. Blume behandelt beides als eine gemeinsame Discoverability-Ebene. Metadaten, Social Cards, Feeds und strukturierte Daten bedienen die Crawler, die dich ranken; `llms.txt`, rohes Markdown, eine JSON-API, ein MCP-Server und Discovery-Manifeste bedienen die Agents, die Fragen über dich beantworten — und die Dateien dazwischen (`robots.txt`, die Sitemap, JSON-LD) werden von beiden gelesen.
+
+Fast alles davon ist standardmäßig aktiv und braucht keine Konfiguration. Die Stellschrauben liegen unter zwei Keys in `blume.config.ts`: `seo` für das, was Suchmaschinen und soziale Plattformen sehen, und `ai` für das, was Agents sehen.
+
+```ts blume.config.ts lineNumbers
+seo: {
+  og: { enabled: true },
+  rss: { enabled: true, types: ["blog", "changelog"] },
+  sitemap: true,
+  robots: true,
+  structuredData: true,
+  x: { handle: "@acme" },
+},
+ai: {
+  llmsTxt: true,
+  mcp: { enabled: false },
+},
+```
+
+Das meiste davon wird mit einer absoluten Site-URL deutlich schärfer — setze [`deployment.site`](/docs/deployment), damit Feeds, OG-Bilder, Canonicals, die Sitemap, JSON-LD und jedes Agent-Manifest vollständige URLs ausgeben können. Ein paar Oberflächen (Open-Graph-Bilder, die Sitemap) bleiben deaktiviert, bis sie gesetzt ist.
+
+## Was der Build ausgibt
+
+| Oberfläche | Wo | Standard | Guide |
+| --- | --- | --- | --- |
+| `<head>`-Metadaten, Canonicals, X-Cards | jede Seite | an | [Metadaten](/docs/discoverability/metadata) |
+| Social-Share-Bilder | `/og/<route>.png` | an mit einer Site-URL | [Open-Graph-Bilder](/docs/discoverability/open-graph) |
+| schema.org JSON-LD | jede Seite | an | [Strukturierte Daten](/docs/discoverability/structured-data) |
+| RSS-Feeds | `/<type>/rss.xml` | an | [RSS-Feeds](/docs/discoverability/rss) |
+| `sitemap.xml`, `robots.txt`, Content-Signale | Site-Root | an | [Sitemap und robots](/docs/discoverability/sitemap-and-robots) |
+| `llms.txt`, `llms-full.txt` | Site-Root | an | [llms.txt](/docs/discoverability/llms-txt) |
+| Rohe Markdown-Spiegel, Content Negotiation, Copy as Markdown, Open in chat | `/<route>.md` | an | [Markdown für Agents](/docs/discoverability/markdown) |
+| JSON-API und ihre OpenAPI-Beschreibung | `/api/docs/…`, `/openapi.json` | an | [JSON-API](/docs/discoverability/json-api) |
+| MCP-Server | `/mcp` | opt-in, Server-Output | [MCP-Server](/docs/discoverability/mcp) |
+| `agent-readability.json`, `Link`-Header, API-Katalog, WebMCP, Skills, Web Bot Auth | Site-Root, `/.well-known/…` | an | [Agent-Discovery](/docs/discoverability/agent-discovery) |
+
+Jede generierte Datei weicht einer, die du selbst mitlieferst: Lege eine `robots.txt`, `sitemap.xml`, `llms.txt`, `openapi.json` oder `agent-readability.json` in `public/` ab, und Blume liefert stattdessen deine aus.
+
+Der **Ask AI**-Assistent auf der Seite ist das eine KI-Feature, das anderswo dokumentiert ist: Es ist eher ein Produktfeature für Leser als eine Discovery-Oberfläche und liegt deshalb unter [Konfiguration](/docs/configuration/ask-ai).
+
+## Deine Arbeit prüfen
+
+[`blume audit`](/docs/reference/cli#auditing-the-built-site) crawlt die gebaute Site und berichtet über Titel, Beschreibungen, Canonicals, Open-Graph- und X-Cards, hreflang, die Sitemap, `robots.txt` und strukturierte Daten. Richte es mit `--url` auf ein Deployment, um zusätzlich Response-Header und [DNS-basierte Agent-Discovery](/docs/discoverability/agent-discovery#dns-based-discovery-dns-aid) zu prüfen.

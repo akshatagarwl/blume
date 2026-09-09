@@ -1,0 +1,98 @@
+---
+title: Sitemap e robots
+description: >-
+  O sitemap.xml e o robots.txt que o Blume escreve para os crawlers, e a linha Content-Signal que diz aos crawlers de IA como eles podem usar sua documentação.
+---
+
+Crawlers de busca e crawlers de IA começam pelos mesmos dois arquivos na raiz do seu site. O Blume escreve os dois a cada build, e o `robots.txt` carrega os sinais de uso de conteúdo que os crawlers de IA procuram, então é aqui que o lado da busca e o lado dos agentes da descobribilidade se encontram.
+
+## Sitemap
+
+O Blume escreve um `sitemap.xml` com todas as páginas indexáveis no momento do build. Ele precisa de um [`deployment.site`](/docs/deployment) absoluto e lista todas as páginas exceto rascunhos, ocultas e páginas com [`noindex`](/docs/discoverability/metadata#per-page-overrides). Em um site [versionado](/docs/content/versioning), páginas arquivadas cuja canonical aponta para o equivalente ativo também ficam de fora — a página ativa é a que deve ser indexada. Ativado por padrão:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  sitemap: true,
+}
+```
+
+Envie seu próprio `public/sitemap.xml` para assumir o controle — o Blume nunca sobrescreve um arquivo que você coloca em `public/`.
+
+## Robots
+
+O Blume escreve um `robots.txt` que permite todos os crawlers, declara seus [content signals](#content-signals) e adiciona uma linha `Sitemap:` apontando para o sitemap quando houver um disponível. Ativado por padrão:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  robots: true,
+}
+```
+
+```txt robots.txt
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
+
+Sitemap: https://docs.example.com/sitemap.xml
+```
+
+### Content signals
+
+A linha `Content-Signal` — a convenção emergente de uso de conteúdo — declara como os crawlers de IA podem reutilizar sua documentação. O Blume a emite **ativada por padrão, com todos os sinais definidos como `yes`**, refletindo sua postura de que a documentação está aberta tanto para humanos quanto para agentes:
+
+- `search` — indexação de busca tradicional e por IA
+- `aiInput` — grounding / RAG no momento da resposta
+- `aiTrain` — treinamento de modelos
+
+Restrinja qualquer sinal definindo-o como `false`; os que você deixar de fora continuam como `yes`:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  contentSignals: {
+    aiTrain: false, // opt out of training, keep search + grounding
+  },
+}
+```
+
+```txt robots.txt
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+Allow: /
+```
+
+Defina `contentSignals: false` para remover a declaração por completo:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  contentSignals: false,
+}
+```
+
+<TypeTable
+  type={{
+    "seo.contentSignals": {
+      type: "boolean | object",
+      description:
+        "Declaração Content-Signal. true ou omitido emite todos os sinais como yes; false remove a linha; um objeto define os sinais individualmente.",
+    },
+    "contentSignals.search": {
+      type: "boolean",
+      description:
+        "Permite o uso para indexação de busca (search). Padrão true.",
+    },
+    "contentSignals.aiInput": {
+      type: "boolean",
+      description:
+        "Permite o uso para grounding / RAG de IA no momento da resposta (ai-input). Padrão true.",
+    },
+    "contentSignals.aiTrain": {
+      type: "boolean",
+      description:
+        "Permite o uso para treinamento de modelos de IA (ai-train). Padrão true.",
+    },
+  }}
+/>
+
+Content signals expressam uma preferência, não controle de acesso: eles dizem aos crawlers bem-comportados como você gostaria que seu conteúdo fosse usado, e cabe ao crawler respeitá-los. A mesma política é espelhada como `contentUsage` no [manifesto de legibilidade para agentes](/docs/discoverability/agent-discovery#agent-readability), então um agente que nunca lê o `robots.txt` mesmo assim a enxerga.
+
+Envie seu próprio `public/robots.txt` para assumir o controle.

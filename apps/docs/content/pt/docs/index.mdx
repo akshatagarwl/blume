@@ -46,7 +46,7 @@ Seu [`blume.config.ts`](/docs/configuration) e cada [`meta.ts`](/docs/content/me
 
 - **Componentes** — callouts, cards, steps, tabs, accordions, badges, árvores de arquivos e tabelas de parâmetros, utilizáveis em MDX [sem imports](/docs/content/components).
 - **Busca local** — o Orama funciona em dev e em produção; o Pagefind está a uma flag de distância para sites grandes. Sem índice hospedado.
-- **IA** — [`llms.txt`, URLs de Markdown bruto, uma API JSON com descrição OpenAPI, Copiar como Markdown, Abrir no chat, um assistente Ask AI e um servidor MCP hospedado](/docs/discoverability).
+- **IA** — [`llms.txt`, URLs de Markdown bruto, uma API JSON com descrição OpenAPI, Copiar como Markdown, Abrir no chat e um servidor MCP hospedado](/docs/discoverability), além de um [assistente Ask AI](/docs/configuration/ask-ai) opcional.
 - **Navegação** — inferida a partir dos arquivos, refinada com `meta.ts` ou configuração.
 - **SEO** — metadados, imagens Open Graph, feeds RSS e JSON-LD, [já integrados](/docs/discoverability).
 - **Personalização** — substituições de componentes, ilhas React, páginas personalizadas, tokens de tema e um registro de componentes-fonte via `blume add`.
@@ -65,8 +65,8 @@ A CLI do Blume descobre seu conteúdo, constrói um grafo de conteúdo e gera um
   <Card title="Componentes" href="/docs/content/components" icon="folder">
     Explore a biblioteca de componentes integrada.
   </Card>
-  <Card title="IA" href="/docs/discoverability" icon="lightbulb">
-    Publique `llms.txt` e um assistente Ask AI.
+  <Card title="Descoberta" href="/docs/discoverability" icon="lightbulb">
+    Publique `llms.txt`, cards sociais e um servidor MCP.
   </Card>
   <Card title="CLI" href="/docs/reference/cli" icon="rocket">
     Todos os comandos e flags do `blume`.

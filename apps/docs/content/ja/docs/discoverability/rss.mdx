@@ -1,0 +1,25 @@
+---
+title: RSS フィード
+description: >-
+  日付付きコンテンツタイプごとのフィード（デフォルトではブログと変更履歴）。/<type>/rss.xml で配信され、フィードリーダーに自動的に通知されます。
+---
+
+Blume は、`rss.types` に含まれるコンテンツタイプ（デフォルトでは `blog` と `changelog`）のうちページが存在するものについて RSS フィードを生成し、`/<type>/rss.xml` で配信します。日付付きのブログエントリや変更履歴エントリの作成については [フィード](/docs/content#feeds) を参照してください。
+
+```ts blume.config.ts lineNumbers
+seo: {
+  rss: {
+    enabled: true,
+    types: ["blog", "changelog"],
+    limit: 50,
+  },
+}
+```
+
+| オプション | デフォルト | 説明 |
+| --- | --- | --- |
+| `enabled` | `true` | フィードを生成します。 |
+| `types` | `["blog", "changelog"]` | それぞれフィードを持つコンテンツタイプです。 |
+| `limit` | `50` | フィードごとの最大アイテム数（新しい順）。 |
+
+Blume は `<link rel="alternate">` タグを挿入するため、ブラウザやフィードリーダーがフィードを自動的に検出します。また、[エージェント可読性マニフェスト](/docs/discoverability/agent-discovery#agent-readability) にも記載されるため、エージェントもフィードを見つけられます。[`deployment.site`](/docs/deployment) が設定されている場合、アイテムのリンクは絶対 URL になります。

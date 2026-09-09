@@ -1,0 +1,52 @@
+---
+title: Dados estruturados
+description: >-
+  O JSON-LD do schema.org que toda página carrega — nós WebSite, article e breadcrumb — mais os blocos opcionais Organization e SoftwareApplication que contam aos motores de busca e agentes quem você é.
+---
+
+O Blume emite JSON-LD do [schema.org](https://schema.org) no `<head>` de todas as páginas para que os motores de busca entendam seu conteúdo. Ativado por padrão:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  structuredData: true,
+}
+```
+
+Cada página inclui:
+
+- um nó **WebSite** para a identidade do site,
+- a página como um **article** — `BlogPosting` para posts do blog, `TechArticle` para changelog e docs — com sua descrição e data de publicação,
+- uma **BreadcrumbList** construída a partir da trilha de navegação.
+
+As URLs são absolutas quando [`deployment.site`](/docs/deployment) está definido. Páginas marcadas com [`seo.noindex`](/docs/discoverability/metadata#per-page-overrides) são ignoradas. Quando [`lastModified`](/docs/configuration#last-modified) está ativo, a data de cada página também é emitida como `dateModified`.
+
+## Identidade do site
+
+O nó WebSite diz que um site existe; ele não diz _o que_ é nem _quem_ o mantém — que é justamente o que os agentes de IA leem no JSON-LD antes de recomendar ou citar você. Dois blocos opcionais preenchem isso, e ambos precisam de `deployment.site` (os nós carregam identificadores absolutos):
+
+```ts blume.config.ts lineNumbers
+seo: {
+  organization: {
+    name: "Acme", // defaults to the site title
+    email: "hello@acme.com",
+    telephone: "+1 555 0100",
+    address: { addressLocality: "Sydney", addressCountry: "AU" },
+    logo: "/logo.svg",
+    sameAs: ["https://github.com/acme", "https://x.com/acme"],
+  },
+  software: {
+    license: "MIT",
+    operatingSystem: "Node.js 22+",
+    price: 0, // emitted as an Offer; 0 marks it free
+    sameAs: ["https://www.npmjs.com/package/acme"],
+  },
+}
+```
+
+`organization` adiciona um nó **Organization** a todas as páginas — os nós WebSite e article o citam como `publisher` — com o e-mail e o telefone como um `ContactPoint` (`contactType` tem como padrão `"customer support"`) e o endereço como um `PostalAddress`, os dois campos que as verificações de validação de negócio procuram. `name` e `url` assumem por padrão os do site; um `logo` relativo à raiz é absolutizado como qualquer URL de página.
+
+`software` adiciona um nó **SoftwareApplication** à página inicial: o nome e a descrição do produto (assumindo por padrão os do site), `applicationCategory` (padrão `"DeveloperApplication"`), sistema operacional, licença, um `Offer` quando `price` está definido, e as URLs do registro ou repositório em `sameAs`. Passe `software: true` para aceitar todos os padrões. A organização, quando configurada, é citada como seu `publisher`.
+
+## Páginas personalizadas
+
+Uma [página `.astro`](/docs/advanced/custom-pages) personalizada renderizada através do `PageLayout` emite o mesmo grafo `WebSite`, então uma página inicial de marketing não fica sendo a única URL sem dados estruturados. Passe `structuredDataEnabled={config.structuredData}` para mantê-la em sincronia com essa configuração, ou `structuredDataEnabled={false}` para desativá-la apenas naquela página.
