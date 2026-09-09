@@ -4,7 +4,7 @@ import { finding } from "../catalog.ts";
 import { pageSite } from "../locate.ts";
 import { ERROR_ROUTES } from "../types.ts";
 import type { AuditContext, CheckModule } from "../types.ts";
-import { normalizePath, siteOrigin } from "../url.ts";
+import { isServed, normalizePath, siteOrigin } from "../url.ts";
 
 /** The object form of `ai.llmsTxt`. The schema always emits it, but hand-built
  * audit contexts (tests, partial configs) may still carry the raw boolean. */
@@ -97,9 +97,10 @@ export const llmsChecks: CheckModule = {
       }
       listed.add(path);
       // A listed target may be a served asset rather than a page — Blume's own
-      // llms.txt links the changelog RSS feed — so the file index vouches for
-      // it too, the same way redirect targets may land on a served asset.
-      if (!context.byUrl.has(path) && !context.files.has(path)) {
+      // llms.txt links the changelog RSS feed — or a route the server answers
+      // rather than a file the build writes, like the MCP endpoint. `isServed`
+      // vouches for all three, the same way it does for links and redirects.
+      if (!isServed(context, path)) {
         found.push(
           finding(
             "BLUME_AUDIT_LLMS_TXT_STALE_ENTRY",

@@ -8,7 +8,7 @@ import type {
   RobotsDoc,
   SitemapDoc,
 } from "../src/audit/types.ts";
-import { normalizePath, siteOrigin } from "../src/audit/url.ts";
+import { isServed, siteOrigin } from "../src/audit/url.ts";
 import type { BlumeProject } from "../src/core/project-graph.ts";
 
 /** A page with everything a healthy Blume page has, so a test only sets the defect. */
@@ -60,6 +60,8 @@ interface ContextOptions {
   robots?: RobotsDoc | null;
   llms?: LlmsDoc | null;
   llmsTxt?: boolean | { enabled: boolean; openapi: boolean };
+  /** `ai.mcp`, whose route llms.txt lists but the static output never holds. */
+  mcp?: { enabled: boolean; route: string };
   files?: Map<string, number>;
   sources?: Map<string, string>;
   seo?: { robots?: boolean; sitemap?: boolean };
@@ -84,7 +86,10 @@ export const context = (options: ContextOptions = {}): AuditContext => {
   // the checks never touch the graph, manifest, or source machinery.
   const project = {
     config: {
-      ai: { llmsTxt: options.llmsTxt ?? { enabled: true, openapi: true } },
+      ai: {
+        llmsTxt: options.llmsTxt ?? { enabled: true, openapi: true },
+        mcp: options.mcp ?? { enabled: false, route: "/mcp" },
+      },
       basePath: "",
       deployment: {
         adapter: options.adapter ?? null,
@@ -102,17 +107,17 @@ export const context = (options: ContextOptions = {}): AuditContext => {
   } as BlumeProject;
 
   const byUrl = new Map(pages.map((page) => [page.url, page]));
+  const files = options.files ?? new Map<string, number>();
   return {
     byUrl,
-    files: options.files ?? new Map(),
+    files,
     graph: buildGraph(pages, siteOrigin(options.site)),
     llms: options.llms ?? null,
     origin: null,
     pages,
     project,
-    redirects: resolveRedirects(
-      redirects,
-      new Set([...byUrl.keys()].map(normalizePath))
+    redirects: resolveRedirects(redirects, (path) =>
+      isServed({ byUrl, files, project }, path)
     ),
     robots: options.robots ?? null,
     sitemap: options.sitemap ?? null,

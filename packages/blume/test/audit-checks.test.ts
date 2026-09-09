@@ -580,6 +580,25 @@ describe("link checks", () => {
     expect(run(linkChecks, ctx)).toEqual([]);
   });
 
+  it("accepts a link to the MCP route, which the server answers", () => {
+    // The same `isServed` the llms.txt check uses: a page that advertises the
+    // MCP endpoint is not linking to a missing file.
+    const ctx = context({
+      mcp: { enabled: true, route: "/mcp" },
+      pages: [snapshot({ links: [link("/mcp")], url: "/" })],
+    });
+    expect(run(linkChecks, ctx)).toEqual([]);
+  });
+
+  it("accepts a redirect that lands on the MCP route", () => {
+    const ctx = context({
+      mcp: { enabled: true, route: "/mcp" },
+      pages: [snapshot({ url: "/" })],
+      redirects: [{ from: "/old-mcp", status: 301, to: "/mcp" }],
+    });
+    expect(ctx.redirects[0]?.outcome).toBe("ok");
+  });
+
   it("reports an internal link that hardcodes the site origin", () => {
     const ctx = context({
       pages: [snapshot({ links: [link(`${SITE}/a`)], url: "/a" })],
@@ -1744,6 +1763,38 @@ describe("llms.txt checks", () => {
       site: SITE,
     });
     expect(run(llmsChecks, ctx)).not.toContain("LLMS_TXT_STALE_ENTRY");
+  });
+
+  it("accepts the MCP route, which the server answers rather than a file", () => {
+    // `llms.ts` lists `ai.mcp.route` whenever the server is on, but the
+    // endpoint is a server route: it is in neither the page snapshots nor the
+    // static file index. Read as a stale entry, it failed every server-output
+    // site that enables MCP — and under `--fail-on warning`, blocked publish.
+    const ctx = context({
+      llms: {
+        entries: [{ line: 3, url: "https://x.dev/mcp" }],
+        file: "/dist/llms.txt",
+      },
+      mcp: { enabled: true, route: "/mcp" },
+      pages: [snapshot({ url: "/" })],
+      site: SITE,
+    });
+    expect(run(llmsChecks, ctx)).not.toContain("LLMS_TXT_STALE_ENTRY");
+  });
+
+  it("still reports a missing route when the MCP server is off", () => {
+    // The exemption is the configured route on an MCP build, nothing wider:
+    // with the server disabled, /mcp is as stale as any other dead entry.
+    const ctx = context({
+      llms: {
+        entries: [{ line: 3, url: "https://x.dev/mcp" }],
+        file: "/dist/llms.txt",
+      },
+      mcp: { enabled: false, route: "/mcp" },
+      pages: [snapshot({ url: "/" })],
+      site: SITE,
+    });
+    expect(run(llmsChecks, ctx)).toContain("LLMS_TXT_STALE_ENTRY");
   });
 
   it("reports an indexable nav page that is not listed", () => {
