@@ -27,7 +27,7 @@ Gib jedem Beitrag ein `date`, damit Feed-Einträge neueste zuerst sortiert werde
 
 Blume erzeugt einen Blog-Feed unter **`/blog/rss.xml`**, sortiert nach `date` mit den neuesten Einträgen zuerst. Feeds benötigen eine absolute Site-URL, setze daher [`deployment.site`](/docs/deployment); Blume fügt dann auf jeder Seite ein `<link rel="alternate">`-Tag ein, damit Leser den Feed automatisch finden.
 
-Der Feed ist standardmäßig aktiviert. Feinjustieren kannst du ihn unter [`seo.rss`](/docs/configuration/seo#rss-feeds):
+Der Feed ist standardmäßig aktiviert. Feinjustieren kannst du ihn unter [`seo.rss`](/docs/discoverability/rss):
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -43,7 +43,7 @@ Entferne `"blog"` aus `rss.types`, um den Feed zu überspringen.
 
 ## Strukturierte Daten
 
-Wenn [strukturierte Daten](/docs/configuration/seo#structured-data) aktiviert sind, wird jeder Beitrag als schema.org-**`BlogPosting`** mit seiner Beschreibung und seinem Veröffentlichungsdatum ausgegeben – dem umfangreicheren Artikeltyp, den Suchmaschinen bei Blog-Inhalten erwarten.
+Wenn [strukturierte Daten](/docs/discoverability/structured-data) aktiviert sind, wird jeder Beitrag als schema.org-**`BlogPosting`** mit seiner Beschreibung und seinem Veröffentlichungsdatum ausgegeben – dem umfangreicheren Artikeltyp, den Suchmaschinen bei Blog-Inhalten erwarten.
 
 ## Eine Übersichtsseite erstellen
 
@@ -100,7 +100,7 @@ Wie du das in das vollständige Site-Layout einbettest, erfährst du unter [Eige
   <Card title="Eigene Seiten" href="/docs/advanced/custom-pages" icon="folder">
     Binde die Blog-Übersicht ein und lies aus blume:data.
   </Card>
-  <Card title="SEO" href="/docs/configuration/seo" icon="file">
+  <Card title="SEO" href="/docs/discoverability" icon="file">
     Feeds, Open-Graph-Bilder und strukturierte Daten.
   </Card>
 </CardGroup>

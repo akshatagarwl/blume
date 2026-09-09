@@ -4,7 +4,7 @@ import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 
 // SEO + AEO scene: one centered, frosted `blume.config.ts` card whose seo / ai /
 // mcp keys stagger in — the code speaks for itself. Copy sourced from
-// configuration/seo + configuration/ai.
+// the Discoverability section (discoverability/*) and configuration/ask-ai.
 
 const SANS =
   "var(--font-geist-sans), -apple-system, BlinkMacSystemFont, sans-serif";

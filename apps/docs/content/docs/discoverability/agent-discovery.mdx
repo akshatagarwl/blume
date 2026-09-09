@@ -1,0 +1,196 @@
+---
+title: Agent discovery
+description: How agents find your machine-readable surface without guessing — the agent-readability manifest, Link headers, the RFC 9727 API catalog, WebMCP, published skills, DNS-based discovery, and Web Bot Auth keys.
+---
+
+Publishing `llms.txt`, Markdown mirrors, a JSON API, and an MCP server is only half the job — an agent still has to find them. Blume advertises the whole surface through the conventions agents actually probe: a manifest at the site root, `Link` headers and `<link>` tags, well-known files, and the browser's own model context. Everything here is on by default and derived from what you've already enabled.
+
+## Agent readability
+
+Blume writes an **`/agent-readability.json`** manifest at your site root that indexes the agent-facing surface described across this section — so an agent can discover it in a single fetch instead of guessing at conventions or scraping HTML. Like `llms.txt`, it's on by default:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  agentReadability: true,
+}
+```
+
+The manifest lists only what you've enabled — the [raw Markdown](/docs/discoverability/markdown) mirror pattern, the [JSON API](/docs/discoverability/json-api) and its OpenAPI description, [`llms.txt`](/docs/discoverability/llms-txt) and `llms-full.txt`, the [MCP server](/docs/discoverability/mcp) and its discovery document, the [Ask AI](/docs/configuration/ask-ai) endpoint, the [sitemap](/docs/discoverability/sitemap-and-robots#sitemap), and [RSS feeds](/docs/discoverability/rss) — alongside your site name, description, source repository, and the [content-signal](/docs/discoverability/sitemap-and-robots#content-signals) usage policy. URLs are absolute when [`deployment.site`](/docs/deployment) is set and root-relative otherwise:
+
+```json agent-readability.json
+{
+  "artifacts": {
+    "markdown": {
+      "contentNegotiation": "text/markdown",
+      "pattern": "https://docs.example.com/{route}.md"
+    },
+    "api": {
+      "openapi": "https://docs.example.com/openapi.json",
+      "pages": "https://docs.example.com/api/docs/pages.json",
+      "search": "https://docs.example.com/api/docs/search"
+    },
+    "llmsFullTxt": "https://docs.example.com/llms-full.txt",
+    "llmsTxt": "https://docs.example.com/llms.txt",
+    "mcp": {
+      "discovery": "https://docs.example.com/.well-known/mcp.json",
+      "url": "https://docs.example.com/mcp"
+    }
+  },
+  "description": "Docs for the Acme API.",
+  "generator": "blume@1.0.0",
+  "name": "Acme Docs",
+  "site": "https://docs.example.com",
+  "contentUsage": { "search": true, "ai-input": true, "ai-train": true },
+  "repository": "https://github.com/acme/docs"
+}
+```
+
+The `contentNegotiation` field appears only when the deployed site actually honors the `Accept: text/markdown` header — see [content negotiation](/docs/discoverability/markdown#content-negotiation); on every other deployment the manifest advertises just the `.md` mirror pattern.
+
+Set `seo.agentReadability` to `false` to skip it, or ship your own `public/agent-readability.json` to take over — Blume never overwrites a file you place in `public/`.
+
+## Discovery Link header
+
+Agents that probe a site don't know to look for the manifest — so Blume also advertises it in an [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) `Link` response header on the homepage, using IANA-registered relation types:
+
+```http
+Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json",
+  </openapi.json>; rel="service-desc"; type="application/json",
+  </agent-readability.json>; rel="describedby"; type="application/json",
+  </llms.txt>; rel="describedby"; type="text/plain",
+  </index.md>; rel="alternate"; type="text/markdown"
+```
+
+Each entry appears only when its feature is on. The `alternate` link points at the homepage's Markdown mirror — the page's own [raw Markdown](/docs/discoverability/markdown) when the home route is a content page, or the synthesized `llms.txt` fallback when it's a landing page. The `service-desc` link ([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)) points at the [JSON API](/docs/discoverability/json-api)'s OpenAPI description, and `api-catalog` at the [generated API catalog](#api-catalog). The header rides on every surface Blume controls: the dev server (check it with `curl -I localhost:4321`), static builds via the emitted `_headers` file (Netlify and Cloudflare), and Vercel server builds via the deploy's routing rules.
+
+Not every agent enters through the root, though — one following a search result or a shared link lands on a deep page and never sees the homepage header. So every rendered page also carries the same discovery links in its HTML `<head>`, using the same IANA-registered relations:
+
+```html
+<link
+  rel="describedby"
+  href="/agent-readability.json"
+  type="application/json"
+/>
+<link rel="describedby" href="/llms.txt" type="text/plain" />
+<link rel="alternate" href="/docs/example.md" type="text/markdown" />
+```
+
+Here the `alternate` link points at _that page's own_ [raw-Markdown mirror](/docs/discoverability/markdown), so an agent can jump straight from the HTML it landed on to the token-efficient version. Because the head links travel with the prerendered HTML, they also work on hosts that ignore `_headers` and can't send custom response headers at all (GitHub Pages, S3) — no matter which page the agent enters on.
+
+## API catalog
+
+When the site publishes APIs, Blume generates an [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) API catalog at `/.well-known/api-catalog` — a [linkset](https://www.rfc-editor.org/rfc/rfc9264) that lets agents enumerate your APIs from the domain alone, served with its registered `application/linkset+json` media type on every build surface. There's nothing to configure: the catalog is derived from what's already in `blume.config.ts`. Each [OpenAPI or AsyncAPI reference](/docs/advanced/api-reference) becomes an entry anchored at its rendered docs route, with `service-doc` pointing at those docs and `service-desc` at the spec when it lives at a fetchable URL; the site's own [JSON API](/docs/discoverability/json-api) becomes an entry described by its `/openapi.json`; and the [MCP server](/docs/discoverability/mcp) becomes an entry with its discovery document as the service description:
+
+```json .well-known/api-catalog
+{
+  "linkset": [
+    {
+      "anchor": "https://docs.example.com/reference",
+      "service-doc": [
+        { "href": "https://docs.example.com/reference", "type": "text/html" }
+      ],
+      "service-desc": [{ "href": "https://api.example.com/openapi.json" }]
+    },
+    {
+      "anchor": "https://docs.example.com/api/docs",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
+    },
+    {
+      "anchor": "https://docs.example.com/mcp",
+      "service-desc": [
+        {
+          "href": "https://docs.example.com/.well-known/mcp.json",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        { "href": "https://docs.example.com/", "type": "text/html" }
+      ]
+    }
+  ]
+}
+```
+
+A site with no API references, no MCP server, and the [JSON API](/docs/discoverability/json-api) turned off emits no catalog — there'd be nothing in it. As everywhere, a `public/.well-known/api-catalog` file you ship yourself wins over the generated one.
+
+## WebMCP
+
+[WebMCP](https://webmachinelearning.github.io/webmcp/) is an emerging browser API that lets a page register tools directly with an agentic browser — no separate server connection needed. Every Blume page registers the docs' read-only surface on the page's model context: `search_docs` (site search), `get_page` (a page's [raw Markdown](/docs/discoverability/markdown)), and `list_pages` (the [`llms.txt`](/docs/discoverability/llms-txt) index). The script is tiny, loads no search machinery until a tool is actually called, and silently no-ops in every browser without the API — which today is all of them outside [Chrome's early preview](https://developer.chrome.com/blog/webmcp-epp). It registers on whichever surface the in-flux spec exposes (`navigator.modelContext` or `document.modelContext`), via `provideContext` or per-tool `registerTool`.
+
+It's on by default; set `webmcp: false` to opt out:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  webmcp: false,
+}
+```
+
+## Skills discovery
+
+If your project ships [agent skills](https://agentskills.io) — the [Blume repo itself does](/docs/advanced/skills) — point `ai.skills` at the directory that holds them, and the build publishes them for discovery per the [Agent Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc):
+
+```ts blume.config.ts lineNumbers
+ai: {
+  skills: "./skills",
+}
+```
+
+The path resolves against your project root, and each subdirectory with a `SKILL.md` becomes a published skill. A skill that's a lone `SKILL.md` is copied verbatim to `/.well-known/agent-skills/<name>/SKILL.md` (`type: "skill-md"`); a skill with supporting resources (`scripts/`, `references/`, `assets/`) is bundled into a deterministic `.tar.gz` (`type: "archive"`) so its relative references resolve after unpacking, with script execute bits preserved. The discovery index at `/.well-known/agent-skills/index.json` carries the v0.2.0 `$schema` and, per skill, its name, type, description (from the `SKILL.md` frontmatter), artifact URL, and the SHA-256 digest clients verify downloads against.
+
+Skills with a missing or spec-invalid `name`/`description` are skipped with a build warning rather than published broken, and a `public/.well-known/agent-skills/index.json` you ship yourself takes over the whole surface. Published skills are also listed in [`llms.txt`](/docs/discoverability/llms-txt#generated-sections).
+
+## DNS-based discovery (DNS-AID)
+
+[DNS for AI Discovery](https://datatracker.ietf.org/doc/draft-mozleywilliams-dnsop-dnsaid/) is an emerging IETF draft that lets agents discover a site's AI surface before making a single HTTP request, by querying ServiceMode [SVCB/HTTPS records](https://www.rfc-editor.org/rfc/rfc9460) at a well-known DNS entrypoint. DNS records live in your zone, not in the build, so this is the one discovery surface Blume can't publish for you — instead, add a record with your DNS provider:
+
+```txt
+_index._agents.docs.example.com. 3600 IN HTTPS 1 docs.example.com. alpn=h2
+```
+
+Use the `HTTPS` record type if your provider offers it (Vercel DNS does; it doesn't support the plain `SVCB` type), or a ServiceMode `SVCB` record with `alpn` and `port` parameters otherwise. The draft also recommends signing the zone with DNSSEC so validating resolvers return authenticated answers — providers like Cloudflare enable it in one click, while some (including Vercel DNS) don't support it at all.
+
+`blume audit --url <origin>` checks this for you: when [`deployment.site`](/docs/deployment) is set, the network tier queries the entrypoint over DNS-over-HTTPS and reports the exact record to publish if none exists, plus whether the answers are DNSSEC-authenticated. Set `BLUME_DOH_URL` to point the lookup at your own resolver if your network blocks the public ones (Google, Cloudflare).
+
+## Web Bot Auth
+
+[Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) works in the other direction: it's not about agents reading your docs, but about **your organization's agents identifying themselves** when they make requests elsewhere. Your agents sign their requests with [HTTP Message Signatures](https://www.rfc-editor.org/rfc/rfc9421), and receiving sites verify them against a public-key directory published on your domain. If your org runs agents and your Blume site lives at the domain they identify as, publish their public keys:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  webBotAuth: {
+    keys: [{ kty: "OKP", crv: "Ed25519", x: "JrQLj5P_89iXES9-vFgrIy29c…" }],
+  },
+}
+```
+
+Blume then serves the JWKS at `/.well-known/http-message-signatures-directory` with its registered media type on every build surface. The directory is public by definition, so the config only admits public keys — a JWK containing private material (`d`, `p`, `q`, …) fails validation with an error rather than shipping a leaked credential. Generate an Ed25519 pair with:
+
+```bash
+node -e 'const { generateKeyPairSync } = require("node:crypto"); const { publicKey, privateKey } = generateKeyPairSync("ed25519"); console.log("public: ", JSON.stringify(publicKey.export({ format: "jwk" }))); console.log("private:", JSON.stringify(privateKey.export({ format: "jwk" })))'
+```
+
+The public JWK goes in the config above; the private one goes wherever your signing agent runs (a secret manager, never the repo). If your organization doesn't operate agents, skip this — an empty directory advertises nothing worth verifying.
+
+Since `blume.config.ts` is executed at build time, the key doesn't have to be hardcoded — load it from a build-time environment variable to keep the config free of key blobs and rotate without a commit:
+
+```ts blume.config.ts lineNumbers
+const webBotAuthKey = process.env.WEB_BOT_AUTH_PUBLIC_JWK;
+
+export default defineConfig({
+  ai: {
+    webBotAuth: {
+      keys: webBotAuthKey ? [JSON.parse(webBotAuthKey)] : [],
+    },
+  },
+});
+```
+
+Environments without the variable publish no directory, and a key loaded this way is validated exactly like an inline one — including the private-material check. (The public key isn't a secret, so committing it inline is equally fine; the env var is an ergonomic choice, not a security one.)

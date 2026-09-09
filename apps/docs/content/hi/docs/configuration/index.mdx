@@ -267,7 +267,7 @@ export default defineConfig({
 
 कोई कुंजी या तो साइट-व्यापी घोषित की जा सकती है या प्रति-प्रकार, दोनों नहीं। स्कोपिंग कैसे हल होती है, इसके लिए [प्रति-प्रकार कुंजियाँ](/docs/reference/frontmatter#per-type-keys) देखें।
 
-`facets` उन कस्टम कुंजियों के नाम देता है जिनके मान फ़िल्टर करने योग्य मेटाडेटा बन जाते हैं: वे खोज दस्तावेज़ों (`blume-search.json` और MCP इंडेक्स) के साथ चलती हैं, और [MCP टूल्स](/docs/configuration/ai#mcp-server) एक `filters` इनपुट स्वीकार करते हैं जो उनसे मेल खाता है, ताकि कोई एजेंट, मान लीजिए, `architecture` डोमेन में केवल `enforced` RFC ही प्राप्त कर सके। हर फ़ैसेट एक घोषित कस्टम कुंजी होनी चाहिए — प्रति-प्रकार या साइट-व्यापी — और केवल स्ट्रिंग (या स्ट्रिंग में बदले गए संख्या/बूलियन) मान ही फ़ैसेट बनते हैं।
+`facets` उन कस्टम कुंजियों के नाम देता है जिनके मान फ़िल्टर करने योग्य मेटाडेटा बन जाते हैं: वे खोज दस्तावेज़ों (`blume-search.json` और MCP इंडेक्स) के साथ चलती हैं, और [MCP टूल्स](/docs/discoverability/mcp) एक `filters` इनपुट स्वीकार करते हैं जो उनसे मेल खाता है, ताकि कोई एजेंट, मान लीजिए, `architecture` डोमेन में केवल `enforced` RFC ही प्राप्त कर सके। हर फ़ैसेट एक घोषित कस्टम कुंजी होनी चाहिए — प्रति-प्रकार या साइट-व्यापी — और केवल स्ट्रिंग (या स्ट्रिंग में बदले गए संख्या/बूलियन) मान ही फ़ैसेट बनते हैं।
 
 ## GitHub
 
@@ -366,7 +366,7 @@ dateFormat: { year: "numeric", month: "2-digit", day: "2-digit" },
 
 ## SEO
 
-Open Graph इमेज, RSS फ़ीड्स, और JSON-LD स्ट्रक्चर्ड डेटा, `seo` के अंतर्गत समूहित। मेटाडेटा, फ़्रंटमैटर ओवरराइड्स, और पूरे संदर्भ के लिए [SEO गाइड](/docs/configuration/seo) देखें।
+Open Graph इमेज, RSS फ़ीड्स, और JSON-LD स्ट्रक्चर्ड डेटा, `seo` के अंतर्गत समूहित। मेटाडेटा, फ़्रंटमैटर ओवरराइड्स, और पूरे संदर्भ के लिए [SEO गाइड](/docs/discoverability) देखें।
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -418,9 +418,9 @@ export default defineConfig({
 | `navigation` | स्पष्ट साइडबार और हेडर टैब्स | [नेविगेशन](/docs/content/navigation) |
 | `search` | प्रोवाइडर (Orama, Pagefind, Algolia, और अन्य) और इंडेक्सिंग | [खोज](/docs/configuration/search) |
 | `markdown` | मार्कडाउन रेंडरिंग विकल्प — कोड ब्लॉक्स, हेडिंग एंकर, इमेज ज़ूम | [सिंटैक्स](/docs/content/syntax) |
-| `ai` | `llms.txt`, Ask AI, और कोडिंग एजेंट्स के लिए होस्टेड MCP सर्वर | [AI](/docs/configuration/ai) |
+| `ai` | `llms.txt`, Ask AI, और कोडिंग एजेंट्स के लिए होस्टेड MCP सर्वर | [AI](/docs/discoverability) |
 | `analytics` | Vercel, PostHog, और कस्टम स्क्रिप्ट्स | [एनालिटिक्स](/docs/configuration/analytics) |
-| `seo` | मेटाडेटा, OG इमेज, फ़ीड्स, स्ट्रक्चर्ड डेटा | [SEO](/docs/configuration/seo) |
+| `seo` | मेटाडेटा, OG इमेज, फ़ीड्स, स्ट्रक्चर्ड डेटा | [SEO](/docs/discoverability) |
 | `deployment` | आउटपुट मोड, अडैप्टर, और साइट URL | [डिप्लॉयमेंट](/docs/deployment) |
 | `redirects` | स्थायी और अस्थायी रीडायरेक्ट्स | [डिप्लॉयमेंट](/docs/deployment#redirects) |
 | `integrations` | Blume के अंतर्निर्मित इंटीग्रेशन के बाद जोड़े गए Astro इंटीग्रेशन | [कस्टमाइज़ेशन](/docs/configuration/customization#astro-integrations) |

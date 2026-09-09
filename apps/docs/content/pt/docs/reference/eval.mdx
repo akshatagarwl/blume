@@ -27,7 +27,7 @@ blume eval  3 question(s) · Claude Code
 
 Cada pergunta passa por duas sessões de agente, usando uma CLI de agente que você já tem instalada — [Claude Code](https://claude.com/claude-code) por padrão, ou [Codex](https://developers.openai.com/codex/cli) com `--agent codex`. O Blume não guarda nenhuma chave de API e não chama nenhum modelo por conta própria.
 
-1. **O leitor** responde à pergunta usando _apenas_ sua documentação. Ele roda em um diretório vazio, com as ferramentas de arquivo, shell e web desativadas, conectado a um [servidor MCP](/docs/configuration/ai) privado que serve sua documentação — as mesmas ferramentas `search_docs`/`get_page` que um agente real usa contra o seu site publicado. Ele não consegue ler seu repositório, então vivencia a documentação exatamente como um usuário novo: o que não está escrito não existe.
+1. **O leitor** responde à pergunta usando _apenas_ sua documentação. Ele roda em um diretório vazio, com as ferramentas de arquivo, shell e web desativadas, conectado a um [servidor MCP](/docs/discoverability/mcp) privado que serve sua documentação — as mesmas ferramentas `search_docs`/`get_page` que um agente real usa contra o seu site publicado. Ele não consegue ler seu repositório, então vivencia a documentação exatamente como um usuário novo: o que não está escrito não existe.
 2. **O juiz** avalia a resposta em relação aos fatos que você listou, sem nenhuma ferramenta. Paráfrase passa; um fato ausente ou contradito falha — e "a documentação não diz" também falha.
 
 O snapshot do MCP é construído diretamente a partir das suas fontes de conteúdo, então não é necessário rodar o `blume build` antes, e nada é publicado ou enviado para lugar nenhum.

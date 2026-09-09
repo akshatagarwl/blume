@@ -6,10 +6,9 @@ export default defineMeta({
     "theming",
     "customization",
     "search",
-    "ai",
+    "ask-ai",
     "analytics",
     "export",
-    "seo",
   ],
   title: "Configuration",
 });

@@ -27,7 +27,7 @@ Dê a cada post uma `date` para que os itens do feed sejam ordenados do mais rec
 
 O Blume cria um feed do blog em **`/blog/rss.xml`**, ordenado do mais recente para o mais antigo por `date`. Feeds precisam de uma URL absoluta do site, então defina [`deployment.site`](/docs/deployment); o Blume então injeta uma tag `<link rel="alternate">` em todas as páginas para que os leitores a descubram automaticamente.
 
-O feed está ativado por padrão. Ajuste-o em [`seo.rss`](/docs/configuration/seo#rss-feeds):
+O feed está ativado por padrão. Ajuste-o em [`seo.rss`](/docs/discoverability/rss):
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -43,7 +43,7 @@ Remova `"blog"` de `rss.types` para dispensar o feed.
 
 ## Dados estruturados
 
-Quando os [dados estruturados](/docs/configuration/seo#structured-data) estão ativados, cada post é emitido como um **`BlogPosting`** do schema.org com sua descrição e data de publicação — o tipo de artigo mais rico que os mecanismos de busca esperam para conteúdo de blog.
+Quando os [dados estruturados](/docs/discoverability/structured-data) estão ativados, cada post é emitido como um **`BlogPosting`** do schema.org com sua descrição e data de publicação — o tipo de artigo mais rico que os mecanismos de busca esperam para conteúdo de blog.
 
 ## Criando um índice
 
@@ -104,7 +104,7 @@ Veja [Páginas Personalizadas](/docs/advanced/custom-pages#using-the-site-layout
   >
     Monte o índice do blog e leia de blume:data.
   </Card>
-  <Card title="SEO" href="/docs/configuration/seo" icon="file">
+  <Card title="SEO" href="/docs/discoverability" icon="file">
     Feeds, imagens Open Graph e dados estruturados.
   </Card>
 </CardGroup>

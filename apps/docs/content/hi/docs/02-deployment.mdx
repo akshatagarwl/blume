@@ -23,10 +23,10 @@ sidebar:
 
 - हर डॉक्स और कस्टम पेज स्टैटिक HTML के रूप में
 - एक स्थानीय खोज इंडेक्स (डिफ़ॉल्ट रूप से Orama, Pagefind वैकल्पिक)
-- जब `deployment.site` सेट हो तो एक [`sitemap.xml`](/docs/configuration/seo#sitemap) और [`robots.txt`](/docs/configuration/seo#robots)
+- जब `deployment.site` सेट हो तो एक [`sitemap.xml`](/docs/discoverability/sitemap-and-robots#sitemap) और [`robots.txt`](/docs/discoverability/sitemap-and-robots#robots)
 - AI टूल्स के लिए `llms.txt` और `llms-full.txt`
 - रीडायरेक्ट पेज
-- जब `seo.og.enabled` चालू हो तो प्रीरेंडर की गई [Open Graph छवियाँ](/docs/configuration/seo#open-graph-images)
+- जब `seo.og.enabled` चालू हो तो प्रीरेंडर की गई [Open Graph छवियाँ](/docs/discoverability/open-graph)
 
 ### अपना साइट URL सेट करें
 
@@ -80,7 +80,7 @@ basePath: "/docs",
 
 ## सर्वर रेंडरिंग
 
-स्टैटिक आउटपुट अधिकांश डॉक्स के लिए पर्याप्त है। जब आपको अनुरोध-समय की सुविधाओं की आवश्यकता हो तो सर्वर आउटपुट पर स्विच करें — विशेष रूप से [Ask AI](/docs/configuration/ai) एंडपॉइंट के लिए:
+स्टैटिक आउटपुट अधिकांश डॉक्स के लिए पर्याप्त है। जब आपको अनुरोध-समय की सुविधाओं की आवश्यकता हो तो सर्वर आउटपुट पर स्विच करें — विशेष रूप से [Ask AI](/docs/configuration/ask-ai) एंडपॉइंट के लिए:
 
 ```ts blume.config.ts lineNumbers
 deployment: {
@@ -102,10 +102,10 @@ deployment: {
 
 एक सर्वर बिल्ड में वह सब कुछ शामिल होता है जो एक स्टैटिक बिल्ड में होता है, साथ ही आपके द्वारा जोड़े गए कोई भी Astro एंडपॉइंट या मिडलवेयर। `node` एडाप्टर एक स्वतंत्र सर्वर बनाता है जिसे आप सीधे चला सकते हैं।
 
-Vercel और Cloudflare पर, एक सर्वर बिल्ड [`Accept: text/markdown` कंटेंट नेगोशिएशन](/docs/configuration/ai#content-negotiation) को भी चालू कर देता है, ताकि उस हेडर के साथ किसी भी कंटेंट पेज का अनुरोध करने वाले एजेंट को उसी URL पर उसका रॉ-Markdown मिरर मिले। Vercel पर, Blume डिप्लॉय के रूटिंग कॉन्फ़िग में हेडर-सशर्त रीराइट्स जोड़ देता है; Cloudflare पर, यह Astro वाले Worker के आगे एक छोटा Worker उत्पन्न करता है और `assets.run_worker_first` को कंटेंट रूट्स तक सीमित कर देता है, क्योंकि अन्यथा प्लेटफ़ॉर्म कोई भी सर्वर कोड चलने से पहले ही प्रीरेंडर किए गए पेज परोस देता — अन्य एसेट्स अपना शून्य-Worker तेज़ रास्ता बनाए रखते हैं।
+Vercel और Cloudflare पर, एक सर्वर बिल्ड [`Accept: text/markdown` कंटेंट नेगोशिएशन](/docs/discoverability/markdown#content-negotiation) को भी चालू कर देता है, ताकि उस हेडर के साथ किसी भी कंटेंट पेज का अनुरोध करने वाले एजेंट को उसी URL पर उसका रॉ-Markdown मिरर मिले। Vercel पर, Blume डिप्लॉय के रूटिंग कॉन्फ़िग में हेडर-सशर्त रीराइट्स जोड़ देता है; Cloudflare पर, यह Astro वाले Worker के आगे एक छोटा Worker उत्पन्न करता है और `assets.run_worker_first` को कंटेंट रूट्स तक सीमित कर देता है, क्योंकि अन्यथा प्लेटफ़ॉर्म कोई भी सर्वर कोड चलने से पहले ही प्रीरेंडर किए गए पेज परोस देता — अन्य एसेट्स अपना शून्य-Worker तेज़ रास्ता बनाए रखते हैं।
 
 :::note
-सर्वर सुविधाओं का अपना कॉन्फ़िगरेशन होता है — उदाहरण के लिए, Ask AI को एक मॉडल API कुंजी की आवश्यकता होती है। सेटअप के लिए [AI गाइड](/docs/configuration/ai) देखें।
+सर्वर सुविधाओं का अपना कॉन्फ़िगरेशन होता है — उदाहरण के लिए, Ask AI को एक मॉडल API कुंजी की आवश्यकता होती है। सेटअप के लिए [AI गाइड](/docs/configuration/ask-ai) देखें।
 :::
 
 ## रीडायरेक्ट

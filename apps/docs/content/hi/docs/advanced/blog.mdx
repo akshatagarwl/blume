@@ -27,7 +27,7 @@ Documentation should be fast, AI-ready, and zero-config — down to not needing 
 
 Blume **`/blog/rss.xml`** पर एक ब्लॉग फ़ीड बनाता है, जो `date` के अनुसार नए से पुराने क्रम में सजा होता है। फ़ीड को एक पूर्ण (absolute) साइट URL चाहिए, इसलिए [`deployment.site`](/docs/deployment) सेट करें; इसके बाद Blume हर पेज पर एक `<link rel="alternate">` टैग जोड़ देता है ताकि रीडर उसे अपने आप खोज लें।
 
-फ़ीड डिफ़ॉल्ट रूप से चालू रहती है। इसे [`seo.rss`](/docs/configuration/seo#rss-feeds) के अंतर्गत समायोजित करें:
+फ़ीड डिफ़ॉल्ट रूप से चालू रहती है। इसे [`seo.rss`](/docs/discoverability/rss) के अंतर्गत समायोजित करें:
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -43,7 +43,7 @@ seo: {
 
 ## स्ट्रक्चर्ड डेटा
 
-जब [स्ट्रक्चर्ड डेटा](/docs/configuration/seo#structured-data) चालू होता है, तो हर पोस्ट को उसके विवरण और प्रकाशन तिथि के साथ एक schema.org **`BlogPosting`** के रूप में निर्गत किया जाता है — यही वह समृद्ध आर्टिकल टाइप है जिसकी सर्च इंजन ब्लॉग कंटेंट के लिए अपेक्षा करते हैं।
+जब [स्ट्रक्चर्ड डेटा](/docs/discoverability/structured-data) चालू होता है, तो हर पोस्ट को उसके विवरण और प्रकाशन तिथि के साथ एक schema.org **`BlogPosting`** के रूप में निर्गत किया जाता है — यही वह समृद्ध आर्टिकल टाइप है जिसकी सर्च इंजन ब्लॉग कंटेंट के लिए अपेक्षा करते हैं।
 
 ## इंडेक्स बनाना
 
@@ -100,7 +100,7 @@ const posts = (await getCollection("docs"))
   <Card title="कस्टम पेज" href="/docs/advanced/custom-pages" icon="folder">
     ब्लॉग इंडेक्स माउंट करें और blume:data से पढ़ें।
   </Card>
-  <Card title="SEO" href="/docs/configuration/seo" icon="file">
+  <Card title="SEO" href="/docs/discoverability" icon="file">
     फ़ीड, Open Graph इमेज, और स्ट्रक्चर्ड डेटा।
   </Card>
 </CardGroup>

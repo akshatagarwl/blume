@@ -104,7 +104,7 @@ content: {
 
 Blume は **`/changelog/rss.xml`** に変更履歴フィードも構築し、`date` の新しい順にソートします。フィードには絶対的なサイト URL が必要なので、[`deployment.site`](/docs/deployment) を設定してください。その後 Blume がすべてのページに `<link rel="alternate">` タグを挿入し、読者が自動的に見つけられるようにします。
 
-フィードはデフォルトで有効です。[`seo.rss`](/docs/configuration/seo#rss-feeds) で調整できます:
+フィードはデフォルトで有効です。[`seo.rss`](/docs/discoverability/rss) で調整できます:
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -120,7 +120,7 @@ seo: {
 
 ## 構造化データ
 
-[構造化データ](/docs/configuration/seo#structured-data)が有効な場合、各変更履歴エントリは説明と公開日を伴う schema.org の **`TechArticle`** として出力されるため、検索エンジンがリリースを日付付きの記事としてインデックスできます。
+[構造化データ](/docs/discoverability/structured-data)が有効な場合、各変更履歴エントリは説明と公開日を伴う schema.org の **`TechArticle`** として出力されるため、検索エンジンがリリースを日付付きの記事としてインデックスできます。
 
 <CardGroup cols={2}>
   <Card

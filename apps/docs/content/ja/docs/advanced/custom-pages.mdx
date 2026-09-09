@@ -223,7 +223,7 @@ const { config } = data;
 </PageLayout>
 ```
 
-カスタムページが得るヘッダーはドキュメントページのものと同じなので、そこにあるクロームも一緒についてきます: 検索、テーマ切り替え、言語スイッチャー、そして [Ask AI](/docs/configuration/ai) が設定されている場合は Ask AI のトリガーです。どれもページごとに配線する必要はありません。あるページだけ Ask トリガーを無効にし、他のすべてでは有効なままにするには `askEnabled={false}` を渡します。
+カスタムページが得るヘッダーはドキュメントページのものと同じなので、そこにあるクロームも一緒についてきます: 検索、テーマ切り替え、言語スイッチャー、そして [Ask AI](/docs/configuration/ask-ai) が設定されている場合は Ask AI のトリガーです。どれもページごとに配線する必要はありません。あるページだけ Ask トリガーを無効にし、他のすべてでは有効なままにするには `askEnabled={false}` を渡します。
 
 `siteUrl`（と `ogEnabled`）を渡すと、そのページの `canonical` と生成された `og:image` が自動的に導出されます: Blume はすべての静的カスタムページ — 最も共有されやすい URL であるホームを含む — に対して Open Graph カードをレンダリングし、`/og/<route>.png`（`/` の場合は `/og/index.png`）で配信します。ホームのカードはサイトタイトルを使い、description をアイブロウにします。より深い階層のページはパスの最後のセグメントからタイトルが付けられます。どちらも上書きするには `ogImage` または `canonical` を明示的に設定してください。`ogImage` はルート相対パス — `public/` 内のファイルで、[`deployment.site`](/docs/deployment) を基準にクローラーが必要とする絶対 URL へ解決されます — または外部 URL を受け取り、後者はそのまま通されます:
 
@@ -242,7 +242,7 @@ const { config } = data;
 
 変わるのはこのページだけで、他のすべてのルートは生成されたカードのままです — つまりこれが、ホームページだけに独自の共有画像を与える方法です。生成されたカードは自身のサイズと代替テキストをクローラーに対して自動的に宣言します。独自の `ogImage` を使う場合は、共有カードが同じ扱いを受けられるよう `ogImageAlt` と `ogImageSize` を併せて渡してください。
 
-このページは schema.org の JSON-LD も出力します — ドキュメントページが持つのと同じ `WebSite` グラフなので、（多くの場合カスタムページである）ホームページだけが構造化データのない URL になることはありません。[`structuredData`](/docs/configuration/seo) の設定と同期させるには `structuredDataEnabled={config.structuredData}` を、特定のページだけ無効にするには `structuredDataEnabled={false}` を渡します。
+このページは schema.org の JSON-LD も出力します — ドキュメントページが持つのと同じ `WebSite` グラフなので、（多くの場合カスタムページである）ホームページだけが構造化データのない URL になることはありません。[`structuredData`](/docs/discoverability/structured-data) の設定と同期させるには `structuredDataEnabled={config.structuredData}` を、特定のページだけ無効にするには `structuredDataEnabled={false}` を渡します。
 
 `page.title` はドキュメントタイトルとしてそのまま使われます（`- siteTitle` のサフィックスは付きません）。マーケティングページは通常、自前のタイトルを設定するためです。代わりにカスタムページへ完全なドキュメントのクローム — サイドバー、目次、すべて — を与えるには、生成されたページが使うレイアウトである `RootLayout` でラップします。必要な props は `blume:data` から直接取得できます:
 
@@ -273,9 +273,9 @@ import data from "blume:data";
 
 ## 404 ページ
 
-Blume はデフォルトの **not found** ページを標準で同梱しています: サイトのクローム（ヘッダー、検索、テーマ）でラップされた中央揃えの「404」メッセージで、マッチしないあらゆる URL に対して配信されます。`blume build` はこれを `404.html` に書き出し、静的ホストが自動的に配信します。また `blume dev` は不明なルートに対してこれを表示します。メッセージの下には **Where to look next** のリストがあり、すべてのトップレベルセクションに加えて、存在する場合は `sitemap.xml` と [`llms.txt`](/docs/configuration/ai#llmstxt) のインデックスへのリンクが並ぶため、読者 — あるいは古い URL をたどったエージェント — が戻る道を持てます。
+Blume はデフォルトの **not found** ページを標準で同梱しています: サイトのクローム（ヘッダー、検索、テーマ）でラップされた中央揃えの「404」メッセージで、マッチしないあらゆる URL に対して配信されます。`blume build` はこれを `404.html` に書き出し、静的ホストが自動的に配信します。また `blume dev` は不明なルートに対してこれを表示します。メッセージの下には **Where to look next** のリストがあり、すべてのトップレベルセクションに加えて、存在する場合は `sitemap.xml` と [`llms.txt`](/docs/discoverability/llms-txt) のインデックスへのリンクが並ぶため、読者 — あるいは古い URL をたどったエージェント — が戻る道を持てます。
 
-このページには `/404.md` という Markdown の対応版と、`/404.json` という JSON の対応版（[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) の problem details）もあり、同じ復帰用リンク（[`deployment.site`](/docs/deployment) が設定されていれば絶対 URL になります）に加えて、JSON API が有効な場合は [`openapi.json`](/docs/configuration/ai#json-api) の記述も備えています。[Vercel のサーバービルド](/docs/deployment#server-rendering)では、存在しないページへのリクエストが [`Accept: text/markdown`](/docs/configuration/ai#content-negotiation) を送る場合、あるいはどのページにも裏付けられていない `.md` URL を要求する場合、HTML のシェルではなく `404` ステータス付きでその Markdown の本文が返されます。`Accept: application/json` を送る場合、あるいはどのファイルにも裏付けられていない `.json` URL を要求する場合は problem ドキュメントが返されます — つまりエージェントは、次にどこへ行くべきかを知るためにクロームだらけのページを解析する必要がまったくありません。
+このページには `/404.md` という Markdown の対応版と、`/404.json` という JSON の対応版（[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) の problem details）もあり、同じ復帰用リンク（[`deployment.site`](/docs/deployment) が設定されていれば絶対 URL になります）に加えて、JSON API が有効な場合は [`openapi.json`](/docs/discoverability/json-api) の記述も備えています。[Vercel のサーバービルド](/docs/deployment#server-rendering)では、存在しないページへのリクエストが [`Accept: text/markdown`](/docs/discoverability/markdown#content-negotiation) を送る場合、あるいはどのページにも裏付けられていない `.md` URL を要求する場合、HTML のシェルではなく `404` ステータス付きでその Markdown の本文が返されます。`Accept: application/json` を送る場合、あるいはどのファイルにも裏付けられていない `.json` URL を要求する場合は problem ドキュメントが返されます — つまりエージェントは、次にどこへ行くべきかを知るためにクロームだらけのページを解析する必要がまったくありません。
 
 これを自作のものに置き換えるには、`pages/404.astro` を追加します。`pages/changelog.astro` がチェンジログを引き継ぐのと同じように、このファイルが `/404` ルートを所有します — あなたのページが優先され、デフォルトは破棄されます。他のカスタムページと同様に、`PageLayout` または `RootLayout` で構築してください:
 

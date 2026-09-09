@@ -266,7 +266,7 @@ export default defineConfig({
 
 1 つのキーはサイト全体かタイプごとのどちらかで宣言でき、両方はできません。スコープがどう解決されるかは [タイプごとのキー](/docs/reference/frontmatter#per-type-keys) を参照してください。
 
-`facets` は、その値がフィルタ可能なメタデータになるカスタムキーを指定します。これらは検索ドキュメント（`blume-search.json` と MCP インデックス）に付随し、[MCP ツール](/docs/configuration/ai#mcp-server) はそれらに対して照合を行う `filters` 入力を受け付けます。そのため、エージェントは例えば `architecture` ドメインの `enforced` な RFC だけを取得できます。各ファセットは宣言済みのカスタムキー（タイプごと、またはサイト全体）である必要があり、ファセットになるのは文字列（あるいは文字列化された数値・真偽値）の値のみです。
+`facets` は、その値がフィルタ可能なメタデータになるカスタムキーを指定します。これらは検索ドキュメント（`blume-search.json` と MCP インデックス）に付随し、[MCP ツール](/docs/discoverability/mcp) はそれらに対して照合を行う `filters` 入力を受け付けます。そのため、エージェントは例えば `architecture` ドメインの `enforced` な RFC だけを取得できます。各ファセットは宣言済みのカスタムキー（タイプごと、またはサイト全体）である必要があり、ファセットになるのは文字列（あるいは文字列化された数値・真偽値）の値のみです。
 
 ## GitHub
 
@@ -365,7 +365,7 @@ dateFormat: { year: "numeric", month: "2-digit", day: "2-digit" },
 
 ## SEO
 
-Open Graph 画像、RSS フィード、JSON-LD 構造化データを `seo` にまとめています。メタデータ、フロントマターによる上書き、完全なリファレンスは [SEO ガイド](/docs/configuration/seo) を参照してください。
+Open Graph 画像、RSS フィード、JSON-LD 構造化データを `seo` にまとめています。メタデータ、フロントマターによる上書き、完全なリファレンスは [SEO ガイド](/docs/discoverability) を参照してください。
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -417,9 +417,9 @@ export default defineConfig({
 | `navigation` | サイドバーとヘッダータブの明示的な指定 | [ナビゲーション](/docs/content/navigation) |
 | `search` | プロバイダー（Orama、Pagefind、Algolia など）とインデックス作成 | [検索](/docs/configuration/search) |
 | `markdown` | Markdown のレンダリングオプション — コードブロック、見出しアンカー、画像ズーム | [構文](/docs/content/syntax) |
-| `ai` | `llms.txt`、Ask AI、コーディングエージェント向けのホスト型 MCP サーバー | [AI](/docs/configuration/ai) |
+| `ai` | `llms.txt`、Ask AI、コーディングエージェント向けのホスト型 MCP サーバー | [AI](/docs/discoverability) |
 | `analytics` | Vercel、PostHog、カスタムスクリプト | [アナリティクス](/docs/configuration/analytics) |
-| `seo` | メタデータ、OG 画像、フィード、構造化データ | [SEO](/docs/configuration/seo) |
+| `seo` | メタデータ、OG 画像、フィード、構造化データ | [SEO](/docs/discoverability) |
 | `deployment` | 出力モード、アダプター、サイト URL | [デプロイ](/docs/deployment) |
 | `redirects` | 恒久的および一時的なリダイレクト | [デプロイ](/docs/deployment#redirects) |
 | `integrations` | Blume の組み込み機能の後に追加される Astro インテグレーション | [カスタマイズ](/docs/configuration/customization#astro-integrations) |

@@ -23,10 +23,10 @@ Um build estático inclui:
 
 - cada página de documentação e página personalizada como HTML estático
 - um índice de busca local (Orama por padrão, Pagefind opcional)
-- um [`sitemap.xml`](/docs/configuration/seo#sitemap) e um [`robots.txt`](/docs/configuration/seo#robots) quando `deployment.site` está definido
+- um [`sitemap.xml`](/docs/discoverability/sitemap-and-robots#sitemap) e um [`robots.txt`](/docs/discoverability/sitemap-and-robots#robots) quando `deployment.site` está definido
 - `llms.txt` e `llms-full.txt` para ferramentas de IA
 - páginas de redirecionamento
-- [imagens Open Graph](/docs/configuration/seo#open-graph-images) pré-renderizadas quando `seo.og.enabled` está ativado
+- [imagens Open Graph](/docs/discoverability/open-graph) pré-renderizadas quando `seo.og.enabled` está ativado
 
 ### Defina a URL do seu site
 
@@ -80,7 +80,7 @@ Este é um conceito distinto dos dois caminhos acima:
 
 ## Renderização no servidor
 
-A saída estática atende à maioria das documentações. Mude para a saída de servidor quando precisar de recursos em tempo de requisição — sobretudo o endpoint [Ask AI](/docs/configuration/ai):
+A saída estática atende à maioria das documentações. Mude para a saída de servidor quando precisar de recursos em tempo de requisição — sobretudo o endpoint [Ask AI](/docs/configuration/ask-ai):
 
 ```ts blume.config.ts lineNumbers
 deployment: {
@@ -102,10 +102,10 @@ Na **Vercel**, na **Netlify** e no **Cloudflare Pages**, o Blume escolhe automat
 
 Um build de servidor inclui tudo o que um build estático inclui, além de quaisquer endpoints ou middlewares do Astro que você adicionar. O adaptador `node` produz um servidor autônomo que você pode executar diretamente.
 
-Na Vercel e na Cloudflare, um build de servidor também ativa a [negociação de conteúdo com `Accept: text/markdown`](/docs/configuration/ai#content-negotiation), de modo que um agente que solicite qualquer página de conteúdo com esse cabeçalho recebe seu espelho em Markdown puro na mesma URL. Na Vercel, o Blume insere reescritas condicionadas ao cabeçalho na configuração de roteamento da implantação; na Cloudflare, ele gera um pequeno Worker na frente do Worker do Astro e restringe `assets.run_worker_first` às rotas de conteúdo, já que, de outra forma, a plataforma serviria as páginas pré-renderizadas antes de qualquer código de servidor ser executado — os demais recursos mantêm seu caminho rápido sem Worker.
+Na Vercel e na Cloudflare, um build de servidor também ativa a [negociação de conteúdo com `Accept: text/markdown`](/docs/discoverability/markdown#content-negotiation), de modo que um agente que solicite qualquer página de conteúdo com esse cabeçalho recebe seu espelho em Markdown puro na mesma URL. Na Vercel, o Blume insere reescritas condicionadas ao cabeçalho na configuração de roteamento da implantação; na Cloudflare, ele gera um pequeno Worker na frente do Worker do Astro e restringe `assets.run_worker_first` às rotas de conteúdo, já que, de outra forma, a plataforma serviria as páginas pré-renderizadas antes de qualquer código de servidor ser executado — os demais recursos mantêm seu caminho rápido sem Worker.
 
 :::note
-Os recursos de servidor têm sua própria configuração — por exemplo, o Ask AI precisa de uma chave de API de modelo. Consulte o [guia de IA](/docs/configuration/ai) para a configuração.
+Os recursos de servidor têm sua própria configuração — por exemplo, o Ask AI precisa de uma chave de API de modelo. Consulte o [guia de IA](/docs/configuration/ask-ai) para a configuração.
 :::
 
 ## Redirecionamentos

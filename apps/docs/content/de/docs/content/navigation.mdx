@@ -278,7 +278,7 @@ navigation: {
 }
 ```
 
-Das ist für ein Projekt gedacht, dessen Doku-Repository privat ist. `github` steuert den Bearbeiten-Link pro Seite, das Zeichen im Header und das Repository im [Agenten-Manifest](/docs/configuration/ai) gemeinsam, sodass ein solches Projekt `github` ungesetzt lassen muss – und eine URL sorgt dafür, dass trotzdem ein Zeichen angezeigt wird, das auf etwas Öffentliches verweist. Das Symbol bleibt das GitHub-Zeichen, ein Link auf einen anderen Host gehört daher in [`actions`](#header-actions).
+Das ist für ein Projekt gedacht, dessen Doku-Repository privat ist. `github` steuert den Bearbeiten-Link pro Seite, das Zeichen im Header und das Repository im [Agenten-Manifest](/docs/discoverability/agent-discovery) gemeinsam, sodass ein solches Projekt `github` ungesetzt lassen muss – und eine URL sorgt dafür, dass trotzdem ein Zeichen angezeigt wird, das auf etwas Öffentliches verweist. Das Symbol bleibt das GitHub-Zeichen, ein Link auf einen anderen Host gehört daher in [`actions`](#header-actions).
 
 ## Breadcrumbs und Seitennavigation
 
@@ -299,6 +299,6 @@ Unter dem Inhaltsverzeichnis zeigt jede Seite eine Reihe von Schnellaktionen:
 - **Nach oben scrollen** – kehrt sanft an den Anfang langer Seiten zurück.
 - **Feedback geben** – öffnet ein vorausgefülltes GitHub-Issue mit optionaler Reaktion und Notiz (benötigt ebenfalls `github`).
 
-Andere übergeben die Seite an KI-Tools – **Als Markdown kopieren** und **Im Chat öffnen** – beschrieben unter [KI](/docs/configuration/ai#copy-as-markdown).
+Andere übergeben die Seite an KI-Tools – **Als Markdown kopieren** und **Im Chat öffnen** – beschrieben unter [KI](/docs/discoverability/markdown#copy-as-markdown).
 
 Mit aktiviertem [`export`](/docs/configuration/export) ermöglicht eine **Export**-Aktion Lesenden zusätzlich, die Seite als PDF oder EPUB herunterzuladen.

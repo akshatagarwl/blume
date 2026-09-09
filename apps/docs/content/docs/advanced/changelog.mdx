@@ -103,7 +103,7 @@ The release name becomes the title, its tag becomes `changelog.version`, and its
 
 Blume also builds a changelog feed at **`/changelog/rss.xml`**, sorted newest-first by `date`. Feeds need an absolute site URL, so set [`deployment.site`](/docs/deployment); Blume then injects a `<link rel="alternate">` tag on every page so readers discover it automatically.
 
-The feed is on by default. Tune it under [`seo.rss`](/docs/configuration/seo#rss-feeds):
+The feed is on by default. Tune it under [`seo.rss`](/docs/discoverability/rss):
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -119,7 +119,7 @@ Remove `"changelog"` from `rss.types` to skip the feed while keeping the timelin
 
 ## Structured data
 
-When [structured data](/docs/configuration/seo#structured-data) is on, each changelog entry is emitted as a schema.org **`TechArticle`** with its description and publish date, so search engines can index releases as dated articles.
+When [structured data](/docs/discoverability/structured-data) is on, each changelog entry is emitted as a schema.org **`TechArticle`** with its description and publish date, so search engines can index releases as dated articles.
 
 <CardGroup cols={2}>
   <Card

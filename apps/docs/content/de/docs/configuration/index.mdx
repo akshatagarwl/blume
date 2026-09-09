@@ -267,7 +267,7 @@ export default defineConfig({
 
 Ein Schlüssel kann websiteweit oder pro Typ deklariert werden, nicht beides. Wie die Zuordnung aufgelöst wird, erfährst du unter [Schlüssel pro Typ](/docs/reference/frontmatter#per-type-keys).
 
-`facets` benennt die benutzerdefinierten Schlüssel, deren Werte zu filterbaren Metadaten werden: Sie werden mit den Suchdokumenten mitgeführt (`blume-search.json` und der MCP-Index), und die [MCP-Tools](/docs/configuration/ai#mcp-server) akzeptieren eine `filters`-Eingabe, die gegen sie abgeglichen wird, sodass ein Agent zum Beispiel nur `enforced`-RFCs in der Domäne `architecture` abrufen kann. Jedes Facet muss ein deklarierter benutzerdefinierter Schlüssel sein — pro Typ oder websiteweit — und nur Zeichenketten-Werte (oder in Zeichenketten umgewandelte Zahlen/Booleans) werden facettiert.
+`facets` benennt die benutzerdefinierten Schlüssel, deren Werte zu filterbaren Metadaten werden: Sie werden mit den Suchdokumenten mitgeführt (`blume-search.json` und der MCP-Index), und die [MCP-Tools](/docs/discoverability/mcp) akzeptieren eine `filters`-Eingabe, die gegen sie abgeglichen wird, sodass ein Agent zum Beispiel nur `enforced`-RFCs in der Domäne `architecture` abrufen kann. Jedes Facet muss ein deklarierter benutzerdefinierter Schlüssel sein — pro Typ oder websiteweit — und nur Zeichenketten-Werte (oder in Zeichenketten umgewandelte Zahlen/Booleans) werden facettiert.
 
 ## GitHub
 
@@ -366,7 +366,7 @@ dateFormat: { year: "numeric", month: "2-digit", day: "2-digit" },
 
 ## SEO
 
-Open-Graph-Bilder, RSS-Feeds und strukturierte JSON-LD-Daten, gruppiert unter `seo`. Metadaten, Frontmatter-Überschreibungen und die vollständige Referenz findest du in der [SEO-Anleitung](/docs/configuration/seo).
+Open-Graph-Bilder, RSS-Feeds und strukturierte JSON-LD-Daten, gruppiert unter `seo`. Metadaten, Frontmatter-Überschreibungen und die vollständige Referenz findest du in der [SEO-Anleitung](/docs/discoverability).
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -418,9 +418,9 @@ Zu jeder dieser Optionen gibt es eine eigene Anleitung. Das Konfigurationsfeld i
 | `navigation` | Explizite Seitenleiste und Header-Tabs | [Navigation](/docs/content/navigation) |
 | `search` | Anbieter (Orama, Pagefind, Algolia und weitere) und Indizierung | [Suche](/docs/configuration/search) |
 | `markdown` | Optionen für das Markdown-Rendering — Codeblöcke, Überschriftenanker, Bildzoom | [Syntax](/docs/content/syntax) |
-| `ai` | `llms.txt`, Ask AI und der gehostete MCP-Server für Coding-Agents | [KI](/docs/configuration/ai) |
+| `ai` | `llms.txt`, Ask AI und der gehostete MCP-Server für Coding-Agents | [KI](/docs/discoverability) |
 | `analytics` | Vercel, PostHog und benutzerdefinierte Skripte | [Analytics](/docs/configuration/analytics) |
-| `seo` | Metadaten, OG-Bilder, Feeds, strukturierte Daten | [SEO](/docs/configuration/seo) |
+| `seo` | Metadaten, OG-Bilder, Feeds, strukturierte Daten | [SEO](/docs/discoverability) |
 | `deployment` | Ausgabemodus, Adapter und Website-URL | [Deployment](/docs/deployment) |
 | `redirects` | Permanente und temporäre Weiterleitungen | [Deployment](/docs/deployment#redirects) |
 | `integrations` | Astro-Integrationen, die nach Blumes eingebauten angehängt werden | [Anpassung](/docs/configuration/customization#astro-integrations) |

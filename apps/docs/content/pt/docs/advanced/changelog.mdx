@@ -104,7 +104,7 @@ O nome da versão torna-se o título, a sua tag torna-se `changelog.version` e a
 
 O Blume também constrói um feed do changelog em **`/changelog/rss.xml`**, ordenado por `date` da mais recente para a mais antiga. Os feeds precisam de um URL absoluto do site, por isso defina [`deployment.site`](/docs/deployment); o Blume injeta então uma tag `<link rel="alternate">` em todas as páginas para que os leitores o descubram automaticamente.
 
-O feed está ativo por predefinição. Ajuste-o em [`seo.rss`](/docs/configuration/seo#rss-feeds):
+O feed está ativo por predefinição. Ajuste-o em [`seo.rss`](/docs/discoverability/rss):
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -120,7 +120,7 @@ Remova `"changelog"` de `rss.types` para dispensar o feed mantendo a cronologia.
 
 ## Dados estruturados
 
-Quando os [dados estruturados](/docs/configuration/seo#structured-data) estão ativos, cada entrada do changelog é emitida como um **`TechArticle`** do schema.org com a sua descrição e data de publicação, para que os motores de busca possam indexar as versões como artigos datados.
+Quando os [dados estruturados](/docs/discoverability/structured-data) estão ativos, cada entrada do changelog é emitida como um **`TechArticle`** do schema.org com a sua descrição e data de publicação, para que os motores de busca possam indexar as versões como artigos datados.
 
 <CardGroup cols={2}>
   <Card

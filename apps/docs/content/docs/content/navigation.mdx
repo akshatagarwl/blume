@@ -275,7 +275,7 @@ navigation: {
 }
 ```
 
-That's for a project whose docs repo is private. `github` drives the per-page edit link, the header mark and the [agent manifest](/docs/configuration/ai)'s repository together, so such a project has to leave `github` unset — and a URL is what lets it still show a mark pointing somewhere public. The icon stays the GitHub mark, so a link to another host belongs in [`actions`](#header-actions).
+That's for a project whose docs repo is private. `github` drives the per-page edit link, the header mark and the [agent manifest](/docs/discoverability/agent-discovery)'s repository together, so such a project has to leave `github` unset — and a URL is what lets it still show a mark pointing somewhere public. The icon stays the GitHub mark, so a link to another host belongs in [`actions`](#header-actions).
 
 ## Breadcrumbs and pagination
 
@@ -296,6 +296,6 @@ Below the table of contents, every page shows a set of quick actions:
 - **Scroll to top** — smoothly returns to the top of long pages.
 - **Give feedback** — opens a prefilled GitHub issue with an optional reaction and note (also requires `github`).
 
-Others hand the page to AI tools — **Copy as Markdown** and **Open in chat** — covered in [AI](/docs/configuration/ai#copy-as-markdown).
+Others hand the page to AI tools — **Copy as Markdown** and **Open in chat** — covered in [AI](/docs/discoverability/markdown#copy-as-markdown).
 
 With [`export`](/docs/configuration/export) on, an **Export** action also lets readers download the page as a PDF or EPUB.

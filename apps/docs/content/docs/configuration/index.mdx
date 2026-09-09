@@ -65,7 +65,7 @@ export default defineConfig({
     },
   },
 
-  // AI — see the AI guide
+  // AI — llms.txt, MCP; see the Discoverability section
   ai: {
     llmsTxt: true,
     // MCP server (needs server output)
@@ -75,7 +75,7 @@ export default defineConfig({
     },
   },
 
-  // SEO — OG images, feeds, sitemap, structured data; see the SEO guide
+  // SEO — OG images, feeds, sitemap, structured data; see the Discoverability section
   seo: {
     og: { enabled: true },
     rss: { enabled: true, types: ["blog", "changelog"] },
@@ -266,7 +266,7 @@ export default defineConfig({
 
 A key can be declared site-wide or per-type, not both. See [Per-type keys](/docs/reference/frontmatter#per-type-keys) for how the scoping resolves.
 
-`facets` names the custom keys whose values become filterable metadata: they ride along on search documents (`blume-search.json` and the MCP index), and the [MCP tools](/docs/configuration/ai#mcp-server) accept a `filters` input matching against them, so an agent can retrieve, say, only `enforced` RFCs in the `architecture` domain. Each facet must be a declared custom key — per-type or site-wide — and only string (or stringified number/boolean) values facet.
+`facets` names the custom keys whose values become filterable metadata: they ride along on search documents (`blume-search.json` and the MCP index), and the [MCP tools](/docs/discoverability/mcp) accept a `filters` input matching against them, so an agent can retrieve, say, only `enforced` RFCs in the `architecture` domain. Each facet must be a declared custom key — per-type or site-wide — and only string (or stringified number/boolean) values facet.
 
 ## GitHub
 
@@ -363,9 +363,9 @@ dateFormat: { year: "numeric", month: "2-digit", day: "2-digit" },
 | `timeZone` | IANA time zone. Defaults to `UTC`, so a date reads the same regardless of where the site builds. |
 | `calendar`, `numberingSystem` | Calendar system (e.g. `"japanese"`) and numbering system (e.g. `"arab"`). |
 
-## SEO
+## SEO and AI
 
-Open Graph images, RSS feeds, and JSON-LD structured data, grouped under `seo`. See the [SEO guide](/docs/configuration/seo) for metadata, frontmatter overrides, and the full reference.
+Metadata, Open Graph images, RSS feeds, JSON-LD, the sitemap, and `robots.txt` live under `seo`; `llms.txt`, raw Markdown, the JSON API, and the MCP server live under `ai`. Both are covered page by page in the [Discoverability](/docs/discoverability) section, which treats search engines and AI agents as two audiences for the same machine-readable layer.
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -417,9 +417,10 @@ Each of these has its own guide. The config field is the entry point:
 | `navigation` | Explicit sidebar and header tabs | [Navigation](/docs/content/navigation) |
 | `search` | Provider (Orama, Pagefind, Algolia, and more) and indexing | [Search](/docs/configuration/search) |
 | `markdown` | Markdown rendering options — code blocks, heading anchors, image zoom | [Syntax](/docs/content/syntax) |
-| `ai` | `llms.txt`, Ask AI, and the hosted MCP server for coding agents | [AI](/docs/configuration/ai) |
+| `ai` | `llms.txt`, Markdown mirrors, the JSON API, and the hosted MCP server for coding agents | [SEO and AEO](/docs/discoverability) |
+| `ai.ask` | The in-page Ask AI assistant | [Ask AI](/docs/configuration/ask-ai) |
 | `analytics` | Vercel, PostHog, and custom scripts | [Analytics](/docs/configuration/analytics) |
-| `seo` | Metadata, OG images, feeds, structured data | [SEO](/docs/configuration/seo) |
+| `seo` | Metadata, OG images, feeds, structured data, sitemap, robots | [SEO and AEO](/docs/discoverability) |
 | `deployment` | Output mode, adapter, and site URL | [Deployment](/docs/deployment) |
 | `redirects` | Permanent and temporary redirects | [Deployment](/docs/deployment#redirects) |
 | `integrations` | Astro integrations appended after Blume's built-ins | [Customization](/docs/configuration/customization#astro-integrations) |

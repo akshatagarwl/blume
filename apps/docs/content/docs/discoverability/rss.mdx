@@ -1,0 +1,24 @@
+---
+title: RSS feeds
+description: A feed per dated content type — blog and changelog by default — served at /<type>/rss.xml and advertised to feed readers automatically.
+---
+
+Blume builds an RSS feed for each content type in `rss.types` — `blog` and `changelog` by default — that has pages, served at `/<type>/rss.xml`. See [Feeds](/docs/content#feeds) for authoring blog and changelog entries with dates.
+
+```ts blume.config.ts lineNumbers
+seo: {
+  rss: {
+    enabled: true,
+    types: ["blog", "changelog"],
+    limit: 50,
+  },
+}
+```
+
+| Option    | Default                 | Description                           |
+| --------- | ----------------------- | ------------------------------------- |
+| `enabled` | `true`                  | Generate feeds.                       |
+| `types`   | `["blog", "changelog"]` | Content types that each get a feed.   |
+| `limit`   | `50`                    | Maximum items per feed, newest first. |
+
+Blume injects `<link rel="alternate">` tags so browsers and feed readers discover the feeds automatically, and lists them in the [agent readability manifest](/docs/discoverability/agent-discovery#agent-readability) so agents find them too. Item links are absolute when [`deployment.site`](/docs/deployment) is set.

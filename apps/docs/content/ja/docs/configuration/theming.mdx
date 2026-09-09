@@ -146,7 +146,7 @@ theme: {
 パスはプロジェクトルートからの相対で解決されます。`weight` と `style`（`normal`、`italic`、`oblique`）は省略可能です。省略した場合、Astro がフォントファイルから読み取ります。
 
 :::note
-`theme.fonts` を明示的に設定すると、display と body のフォントは生成される [Open Graph カード](/docs/configuration/seo#card-fonts)にも自動的に適用されるため、共有されたリンクがサイトと揃います。Google 以外のプロバイダーのファミリーはそこではスキップされます（カードのレンダラーは Google Fonts からしか取得できません）。ローカルファイルはどこでも動作します。
+`theme.fonts` を明示的に設定すると、display と body のフォントは生成される [Open Graph カード](/docs/discoverability/open-graph#card-fonts)にも自動的に適用されるため、共有されたリンクがサイトと揃います。Google 以外のプロバイダーのファミリーはそこではスキップされます（カードのレンダラーは Google Fonts からしか取得できません）。ローカルファイルはどこでも動作します。
 :::
 
 システムスタックに戻したいですか？[`theme.css`](#themecss) で `--blume-font-*` トークンを直接上書きしてください。

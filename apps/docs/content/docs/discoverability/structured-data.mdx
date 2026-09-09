@@ -1,0 +1,51 @@
+---
+title: Structured data
+description: The schema.org JSON-LD every page carries — WebSite, article, and breadcrumb nodes — plus the optional Organization and SoftwareApplication blocks that tell search engines and agents who you are.
+---
+
+Blume emits [schema.org](https://schema.org) JSON-LD in every page's `<head>` so search engines understand your content. On by default:
+
+```ts blume.config.ts lineNumbers
+seo: {
+  structuredData: true,
+}
+```
+
+Each page includes:
+
+- a **WebSite** node for site identity,
+- the page as an **article** — `BlogPosting` for blog posts, `TechArticle` for changelog and docs — with its description and publish date,
+- a **BreadcrumbList** built from the navigation trail.
+
+URLs are absolute when [`deployment.site`](/docs/deployment) is set. Pages marked [`seo.noindex`](/docs/discoverability/metadata#per-page-overrides) are skipped. When [`lastModified`](/docs/configuration#last-modified) is on, each page's date is also emitted as `dateModified`.
+
+## Site identity
+
+The WebSite node says a site exists; it doesn't say _what_ it is or _who_ runs it — which is what AI agents read JSON-LD for before they recommend or cite you. Two optional blocks fill that in, both needing `deployment.site` (the nodes carry absolute identifiers):
+
+```ts blume.config.ts lineNumbers
+seo: {
+  organization: {
+    name: "Acme", // defaults to the site title
+    email: "hello@acme.com",
+    telephone: "+1 555 0100",
+    address: { addressLocality: "Sydney", addressCountry: "AU" },
+    logo: "/logo.svg",
+    sameAs: ["https://github.com/acme", "https://x.com/acme"],
+  },
+  software: {
+    license: "MIT",
+    operatingSystem: "Node.js 22+",
+    price: 0, // emitted as an Offer; 0 marks it free
+    sameAs: ["https://www.npmjs.com/package/acme"],
+  },
+}
+```
+
+`organization` adds an **Organization** node to every page — the WebSite and article nodes cite it as `publisher` — with the email and telephone as a `ContactPoint` (`contactType` defaults to `"customer support"`) and the address as a `PostalAddress`, the two fields business-verification checks look for. `name` and `url` default to the site's; a root-relative `logo` is absolutized like any page URL.
+
+`software` adds a **SoftwareApplication** node to the homepage: the product's name and description (defaulting to the site's), `applicationCategory` (default `"DeveloperApplication"`), operating system, license, an `Offer` when `price` is set, and the registry or repository URLs in `sameAs`. Pass `software: true` to take every default. The organization, when configured, is cited as its `publisher`.
+
+## Custom pages
+
+A custom [`.astro` page](/docs/advanced/custom-pages) rendered through `PageLayout` emits the same `WebSite` graph, so a marketing home page isn't the one URL without structured data. Pass `structuredDataEnabled={config.structuredData}` to keep it in sync with this setting, or `structuredDataEnabled={false}` to turn it off for that page alone.

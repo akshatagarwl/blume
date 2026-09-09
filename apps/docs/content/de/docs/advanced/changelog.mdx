@@ -104,7 +104,7 @@ Der Name des Releases wird zum Titel, sein Tag zu `changelog.version`, und sein 
 
 Blume erstellt außerdem einen Changelog-Feed unter **`/changelog/rss.xml`**, sortiert nach `date` mit den neuesten zuerst. Feeds benötigen eine absolute Site-URL, setzen Sie also [`deployment.site`](/docs/deployment); Blume fügt dann auf jeder Seite ein `<link rel="alternate">`-Tag ein, damit Leser den Feed automatisch entdecken.
 
-Der Feed ist standardmäßig aktiviert. Feinjustieren können Sie ihn unter [`seo.rss`](/docs/configuration/seo#rss-feeds):
+Der Feed ist standardmäßig aktiviert. Feinjustieren können Sie ihn unter [`seo.rss`](/docs/discoverability/rss):
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -120,7 +120,7 @@ Entfernen Sie `"changelog"` aus `rss.types`, um den Feed wegzulassen und die Tim
 
 ## Strukturierte Daten
 
-Wenn [strukturierte Daten](/docs/configuration/seo#structured-data) aktiviert sind, wird jeder Changelog-Eintrag als schema.org-**`TechArticle`** mit Beschreibung und Veröffentlichungsdatum ausgegeben, sodass Suchmaschinen Releases als datierte Artikel indexieren können.
+Wenn [strukturierte Daten](/docs/discoverability/structured-data) aktiviert sind, wird jeder Changelog-Eintrag als schema.org-**`TechArticle`** mit Beschreibung und Veröffentlichungsdatum ausgegeben, sodass Suchmaschinen Releases als datierte Artikel indexieren können.
 
 <CardGroup cols={2}>
   <Card

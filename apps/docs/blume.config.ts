@@ -84,6 +84,18 @@ export default defineConfig({
       },
     ],
   },
+  redirects: [
+    { from: "/docs/configuration/ai", to: "/docs/discoverability" },
+    { from: "/docs/configuration/seo", to: "/docs/discoverability" },
+    { from: "/de/docs/configuration/ai", to: "/de/docs/discoverability" },
+    { from: "/de/docs/configuration/seo", to: "/de/docs/discoverability" },
+    { from: "/hi/docs/configuration/ai", to: "/hi/docs/discoverability" },
+    { from: "/hi/docs/configuration/seo", to: "/hi/docs/discoverability" },
+    { from: "/ja/docs/configuration/ai", to: "/ja/docs/discoverability" },
+    { from: "/ja/docs/configuration/seo", to: "/ja/docs/discoverability" },
+    { from: "/pt/docs/configuration/ai", to: "/pt/docs/discoverability" },
+    { from: "/pt/docs/configuration/seo", to: "/pt/docs/discoverability" },
+  ],
   seo: {
     og: { titles: { "/cli": "CLI" } },
     organization: {

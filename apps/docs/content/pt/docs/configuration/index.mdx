@@ -267,7 +267,7 @@ export default defineConfig({
 
 Uma chave pode ser declarada para todo o site ou por tipo, não os dois. Consulte [Chaves por tipo](/docs/reference/frontmatter#per-type-keys) para saber como o escopo é resolvido.
 
-`facets` indica as chaves personalizadas cujos valores viram metadados filtráveis: elas acompanham os documentos de busca (`blume-search.json` e o índice MCP), e as [ferramentas MCP](/docs/configuration/ai#mcp-server) aceitam um input `filters` que faz correspondência com elas, para que um agente possa obter, por exemplo, apenas os RFCs com status `enforced` no domínio `architecture`. Cada faceta precisa ser uma chave personalizada declarada — por tipo ou para todo o site — e apenas os valores do tipo string (ou números/booleanos convertidos em string) funcionam como facetas.
+`facets` indica as chaves personalizadas cujos valores viram metadados filtráveis: elas acompanham os documentos de busca (`blume-search.json` e o índice MCP), e as [ferramentas MCP](/docs/discoverability/mcp) aceitam um input `filters` que faz correspondência com elas, para que um agente possa obter, por exemplo, apenas os RFCs com status `enforced` no domínio `architecture`. Cada faceta precisa ser uma chave personalizada declarada — por tipo ou para todo o site — e apenas os valores do tipo string (ou números/booleanos convertidos em string) funcionam como facetas.
 
 ## GitHub
 
@@ -366,7 +366,7 @@ dateFormat: { year: "numeric", month: "2-digit", day: "2-digit" },
 
 ## SEO
 
-Imagens Open Graph, feeds RSS e dados estruturados JSON-LD, agrupados em `seo`. Consulte o [guia de SEO](/docs/configuration/seo) para metadados, substituições no frontmatter e a referência completa.
+Imagens Open Graph, feeds RSS e dados estruturados JSON-LD, agrupados em `seo`. Consulte o [guia de SEO](/docs/discoverability) para metadados, substituições no frontmatter e a referência completa.
 
 ```ts blume.config.ts lineNumbers
 seo: {
@@ -418,9 +418,9 @@ Cada uma delas tem seu próprio guia. O campo de configuração é o ponto de en
 | `navigation` | Barra lateral explícita e abas do cabeçalho | [Navegação](/docs/content/navigation) |
 | `search` | Provedor (Orama, Pagefind, Algolia, entre outros) e indexação | [Busca](/docs/configuration/search) |
 | `markdown` | Opções de renderização de Markdown — blocos de código, âncoras de títulos, zoom em imagens | [Sintaxe](/docs/content/syntax) |
-| `ai` | `llms.txt`, Ask AI e o servidor MCP hospedado para agentes de programação | [IA](/docs/configuration/ai) |
+| `ai` | `llms.txt`, Ask AI e o servidor MCP hospedado para agentes de programação | [IA](/docs/discoverability) |
 | `analytics` | Vercel, PostHog e scripts personalizados | [Analytics](/docs/configuration/analytics) |
-| `seo` | Metadados, imagens OG, feeds, dados estruturados | [SEO](/docs/configuration/seo) |
+| `seo` | Metadados, imagens OG, feeds, dados estruturados | [SEO](/docs/discoverability) |
 | `deployment` | Modo de saída, adaptador e URL do site | [Deploy](/docs/deployment) |
 | `redirects` | Redirecionamentos permanentes e temporários | [Deploy](/docs/deployment#redirects) |
 | `integrations` | Integrações do Astro adicionadas depois das integradas do Blume | [Personalização](/docs/configuration/customization#astro-integrations) |

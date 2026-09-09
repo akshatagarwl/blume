@@ -59,21 +59,21 @@ questions:
       - llms.txt generation is on by default
       - the build writes both llms.txt and llms-full.txt
     routes:
-      - /docs/configuration/ai
+      - /docs/discoverability/llms-txt
   - id: raw-markdown-urls
     question: How can an LLM fetch a page's raw Markdown?
     expected:
       - append .md to the page's URL
       - works for every page with no configuration
     routes:
-      - /docs/configuration/ai
+      - /docs/discoverability/markdown
   - id: ask-ai-server-output
     question: Can I enable the Ask AI assistant on a static build?
     expected:
       - Ask AI requires server output
       - set deployment.output to server and pick an adapter
     routes:
-      - /docs/configuration/ai
+      - /docs/configuration/ask-ai
   - id: default-search-provider
     question: What search does Blume ship by default, and does it need API keys?
     expected:

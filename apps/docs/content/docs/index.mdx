@@ -31,7 +31,7 @@ Blume builds on Astro and Vite and renders static HTML by default — fast, cach
 
 ### AI-ready out of the box
 
-Every Blume site speaks fluent machine. It emits [`llms.txt` and `llms-full.txt`](/docs/configuration/ai), serves any page's raw Markdown by appending `.md` to its URL, exposes a [JSON API described by OpenAPI](/docs/configuration/ai#json-api), and gives readers **Copy as Markdown** and **Open in chat** actions on every page. Add an optional in-page **Ask AI** assistant, or host an [**MCP server**](/docs/configuration/ai#mcp-server) so coding agents like Claude Code and Cursor can search and read your docs directly — no scraping, no hosted service. Your Markdown is the source of truth for both humans and models.
+Every Blume site speaks fluent machine. It emits [`llms.txt` and `llms-full.txt`](/docs/discoverability/llms-txt), serves any page's raw Markdown by appending `.md` to its URL, exposes a [JSON API described by OpenAPI](/docs/discoverability/json-api), and gives readers **Copy as Markdown** and **Open in chat** actions on every page. Add an optional in-page **Ask AI** assistant, or host an [**MCP server**](/docs/discoverability/mcp) so coding agents like Claude Code and Cursor can search and read your docs directly — no scraping, no hosted service. Your Markdown is the source of truth for both humans and models.
 
 ### Zero configuration — even the template
 
@@ -45,9 +45,9 @@ Your [`blume.config.ts`](/docs/configuration) and every [`meta.ts`](/docs/conten
 
 - **Components** — callouts, cards, steps, tabs, accordions, badges, file trees, and parameter tables, usable in MDX with [no imports](/docs/content/components).
 - **Local search** — Orama works in dev and production; Pagefind is one flag away for large sites. No hosted index.
-- **AI** — [`llms.txt`, raw Markdown URLs, a JSON API with an OpenAPI description, Copy as Markdown, Open in chat, an Ask AI assistant, and a hosted MCP server](/docs/configuration/ai).
+- **AI** — [`llms.txt`, raw Markdown URLs, a JSON API with an OpenAPI description, Copy as Markdown, Open in chat, and a hosted MCP server](/docs/discoverability), plus an optional [Ask AI assistant](/docs/configuration/ask-ai).
 - **Navigation** — inferred from files, refined with `meta.ts` or config.
-- **SEO** — metadata, Open Graph images, RSS feeds, and JSON-LD, [built in](/docs/configuration/seo).
+- **SEO** — metadata, Open Graph images, RSS feeds, and JSON-LD, [built in](/docs/discoverability).
 - **Customization** — component overrides, React islands, custom pages, theme tokens, and a source-component registry via `blume add`.
 - **Eject** — `blume eject` produces a standalone Astro project that still uses the `blume` package.
 
@@ -64,8 +64,8 @@ The Blume CLI discovers your content, builds a content graph, and generates a hi
   <Card title="Components" href="/docs/content/components" icon="folder">
     Explore the built-in component library.
   </Card>
-  <Card title="AI" href="/docs/configuration/ai" icon="lightbulb">
-    Ship `llms.txt` and an Ask AI assistant.
+  <Card title="Discoverability" href="/docs/discoverability" icon="lightbulb">
+    Ship `llms.txt`, social cards, and an MCP server.
   </Card>
   <Card title="CLI" href="/docs/reference/cli" icon="rocket">
     Every `blume` command and flag.

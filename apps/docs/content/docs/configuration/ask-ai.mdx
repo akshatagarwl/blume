@@ -1,0 +1,179 @@
+---
+title: Ask AI
+description: An in-page assistant grounded in your docs — suggested questions, custom instructions, retrieval sizing, backends from the Vercel AI Gateway to any OpenAI-compatible endpoint, and the server output it needs.
+---
+
+Add an assistant that answers reader questions in an in-page chat panel, backed by a streaming server endpoint and the [AI SDK](https://ai-sdk.dev). It's opt-in, and static docs stay fully static until you turn it on:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "gateway", // default
+    model: "openai/gpt-5.5",
+  },
+}
+```
+
+## Suggested questions
+
+Seed the empty state with a few starter prompts. Each renders as a clickable suggestion — click one to send it — with an optional [Lucide icon](/docs/content/components#icon) beside the label:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    suggestions: [
+      { label: "What is Blume?", icon: "rocket" },
+      { label: "How do I write a docs page?", icon: "file-text" },
+      { label: "How do I configure the theme?", icon: "settings" },
+    ],
+  },
+}
+```
+
+`label` is the question that gets asked; `icon` is optional. Leave `suggestions` unset (or empty) and the panel opens to a plain input.
+
+## Custom instructions
+
+Add your own system-prompt text with `instructions` — identity, language, tone, or anything else the assistant should keep in mind:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    instructions:
+      "You are Bloomy, the Acme docs assistant. Answer in the language the question was asked in, and keep answers under three paragraphs.",
+  },
+}
+```
+
+Your text is **appended to** the built-in instructions rather than replacing them: the built-in part carries the [grounding](#grounding) contract — answer only from the retrieved pages, cite them as Markdown links — that the chat panel's citations depend on, so it stays intact whatever you add.
+
+## Grounding
+
+Ask AI is **grounded in your docs**. For each question it retrieves the most relevant pages — using the same lexical [Orama](/docs/configuration/search) index that powers on-page search — and injects them into the model's system prompt, so answers come from your content instead of the model's own knowledge. The assistant is told to answer only from the retrieved pages, to say when something isn't covered, and to cite the pages it drew from.
+
+The page the reader is currently on is added to the context first and used to scope retrieval to that page's language, so answers stay relevant to where they are in the docs. Retrieval runs at request time from a snapshot baked into the build, so it works regardless of your [search](/docs/configuration/search) provider — even when search is set to `none` — and needs no configuration.
+
+Grounding is on for every backend except **[Inkeep](#backends)**, which runs its own retrieval over the content you've indexed in its dashboard.
+
+## Retrieval size
+
+How much documentation a question carries is the biggest lever on how long the reader waits for the first word: the model reads every injected character before it emits a token. On a hosted frontier model that's invisible, but on a self-hosted backend it dominates. `retrieval` sizes it:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    retrieval: {
+      maxResults: 3, // fewer pages retrieved per question
+      excerptChars: 1200, // shorter excerpt from each one
+      contextBudget: 3000, // smaller total injection
+    },
+  },
+}
+```
+
+| Option          | Default | Description                                     |
+| --------------- | ------- | ----------------------------------------------- |
+| `maxResults`    | `6`     | Documents retrieved per question.               |
+| `excerptChars`  | `2000`  | Characters kept from each retrieved page.       |
+| `contextBudget` | `10000` | Total injected characters, across all excerpts. |
+
+The three aren't interchangeable. `contextBudget` caps the whole injection, `excerptChars` decides how deep into a single long page its excerpt reaches — raise it when one page holds the whole answer and the excerpt cuts it off — and `maxResults` caps how many pages retrieval adds. The page the reader is viewing is injected on top of the retrieved ones, so an answer can cite up to one page more than `maxResults`.
+
+The defaults suit a hosted model. Lower them when you're serving from your own hardware and time-to-first-token matters more than recall; answers stay grounded either way, and the assistant is told to say when something isn't covered rather than fill the gap.
+
+## External endpoint
+
+Already have an API backend for AI? Point the panel at it and keep the docs build static:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    endpoint: "https://api.example.com/v1/docs/ask",
+  },
+}
+```
+
+Blume sends the same `POST` body as its built-in route:
+
+```json
+{
+  "messages": [{ "role": "user", "content": "How do I deploy?" }],
+  "page": { "path": "/deployment" }
+}
+```
+
+Return a successful response whose body is a plain UTF-8 text stream. If the endpoint is on another origin, allow the docs origin with CORS: accept `OPTIONS` and `POST`, permit the `content-type` request header, and return the CORS headers on both the preflight and streamed response. With `endpoint` set, Blume generates the chat UI but no server route, grounding snapshot, provider dependency, or provider-secret warning; your backend owns retrieval, authentication, rate limiting, model access, and citations.
+
+## Server output required
+
+Blume's built-in Ask AI backend is a server route (`POST /api/ask`), so it can't run on a static build. Switch to server output and pick an adapter:
+
+```ts blume.config.ts lineNumbers
+deployment: {
+  output: "server",
+  adapter: "vercel",
+}
+```
+
+A static build with Ask AI enabled and no external `endpoint` fails fast with a message telling you to set `deployment.output` to `server`. See [Deployment](/docs/deployment) for the adapters.
+
+## Backends
+
+By default Ask AI routes through the **Vercel AI Gateway**: `model` is a `provider/model` string, so you switch models by changing it (`openai/gpt-5.5`, `anthropic/claude-sonnet-4-5`, and so on) with no provider SDK to install. The gateway reads `AI_GATEWAY_API_KEY` from your environment and is wired up automatically when you deploy on Vercel.
+
+Set `provider` to point Ask AI somewhere else. Each backend reads its API key from an environment variable and streams through a provider SDK you install in your project — only the one you use:
+
+| `provider` | `model` | API key env var | SDK to install |
+| --- | --- | --- | --- |
+| `gateway` (default) | a `provider/model` string via the AI Gateway | `AI_GATEWAY_API_KEY` | none — ships with Blume |
+| `openrouter` | any [OpenRouter](https://openrouter.ai) model | `OPENROUTER_API_KEY` | `@openrouter/ai-sdk-provider` |
+| `llmgateway` | any [LLMGateway](https://llmgateway.io) model | `LLMGATEWAY_API_KEY` | `@ai-sdk/openai-compatible` |
+| `inkeep` | an [Inkeep](https://inkeep.com) QA model | `INKEEP_API_KEY` | `@ai-sdk/openai-compatible` |
+| `openai-compatible` | whatever your endpoint serves | set with `apiKeyEnv` | `@ai-sdk/openai-compatible` |
+
+The SDKs are optional peer dependencies, so add the one your backend needs to your project (e.g. `npm install @openrouter/ai-sdk-provider`). If it's missing, the build warns with the exact package name before Vite would fail to resolve the import.
+
+For example, to use OpenRouter:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "openrouter",
+    model: "anthropic/claude-sonnet-4-5",
+  },
+}
+```
+
+Any OpenAI-compatible endpoint works through `openai-compatible` — supply the `baseUrl` and the env var holding its key:
+
+```ts blume.config.ts lineNumbers
+ai: {
+  ask: {
+    enabled: true,
+    provider: "openai-compatible",
+    baseUrl: "https://my-gateway.example.com/v1",
+    apiKeyEnv: "MY_GATEWAY_API_KEY",
+    model: "gpt-4o",
+  },
+}
+```
+
+Set `apiKeyEnv` (and, for the named providers, `baseUrl`) on any backend to point at a different env var or proxy.
+
+:::note
+**Inkeep** answers from the content you've indexed in the Inkeep dashboard — it runs its own retrieval — so Blume leaves it ungrounded. Every other backend is [grounded](#grounding) in this site's pages.
+:::
+
+Keys are read with `process.env`, which covers the Node, Vercel, and Netlify adapters. On Cloudflare, expose the key through the platform's [runtime binding](https://docs.astro.build/en/guides/integrations-guide/cloudflare/#environment-variables-and-secrets). Enabling Ask AI also turns on React for the in-page island — see [Customization](/docs/configuration/customization#interactive-islands).
+
+## Rate limiting
+
+The `POST /api/ask` endpoint is **unauthenticated** — it has to be, so the in-page assistant can call it. Blume validates each request — rejecting malformed bodies, capping it to 1–40 messages, and accepting only `user`/`assistant` roles so a caller can't inject their own system prompt and repurpose the route as a general LLM proxy — to bound how much a single call can spend against your model, but it can't stop someone from calling the endpoint repeatedly. If cost abuse is a concern, put the route behind a rate limiter — your host's (e.g. Vercel's) edge rate limiting, a middleware, or your model provider's per-key spend limits.
+
+The endpoint is advertised in the [agent readability manifest](/docs/discoverability/agent-discovery#agent-readability) alongside the rest of the site's machine-readable surface.
