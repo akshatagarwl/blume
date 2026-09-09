@@ -126,6 +126,19 @@ describe("catchAllPageTemplate", () => {
     expect(out).not.toContain("Warning");
   });
 
+  it("swaps the switcher's fallback locale in base-less space", () => {
+    // Regression: `route` carries the base path, locale prefixes do not. A page
+    // with no `alternates` used to strip its locale from the based route (no
+    // match) and then prepend the target locale, emitting `/ja/docs/ja/x` for a
+    // page served at `/docs/ja/x`. The strip must happen with the base removed
+    // and the base re-applied afterwards.
+    const out = catchAllPageTemplate({ ...exportOpts, mathEnabled: false });
+    expect(out).toContain("stripLocale(stripMount(route), locale)");
+    expect(out).toContain("applyMount(localizeRoute(logicalRoute, l.code))");
+    // And it must not regress to the base-unaware form.
+    expect(out).not.toContain("stripLocale(route, locale)");
+  });
+
   it("filters [!toc] slugs through the heading plugin's frontmatter key", () => {
     const out = catchAllPageTemplate({ ...exportOpts, mathEnabled: false });
     // The key is interpolated from the shared constant, so a rename cannot

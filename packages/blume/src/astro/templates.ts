@@ -1976,7 +1976,33 @@ const localeAlternates =
 const defaultAlt = i18n ? (alternates ?? []).find((alt) => alt.locale === i18n.defaultLocale) : null;
 const xDefault = defaultAlt && base ? absolute(defaultAlt.path) : null;
 
-const logicalRoute = i18n ? stripLocale(route, locale) : route;
+// \`route\` arrives with the base path already applied, so the locale segment it
+// carries sits *after* the base (\`/docs/ja/guide\`). Locale prefixing is
+// base-less (\`localePrefix\` yields \`/ja\`), so both stripping and re-adding a
+// locale have to happen in base-less space with the base re-applied at the end
+// — otherwise \`stripLocale\` matches nothing and \`localizeRoute\` prepends a
+// second prefix, producing \`/ja/docs/ja/guide\`. Only pages with no
+// \`alternates\` reach this fallback, which is why a generated reference page
+// under a base path hit it while hand-written translations did not.
+const baseMount = data.config.basePath ?? "";
+const stripMount = (path: string) => {
+  const trimmed = baseMount.replace(/\\/+$/u, "");
+  if (!trimmed) {
+    return path;
+  }
+  if (path === trimmed) {
+    return "/";
+  }
+  return path.startsWith(\`\${trimmed}/\`) ? path.slice(trimmed.length) : path;
+};
+const applyMount = (path: string) => {
+  const trimmed = baseMount.replace(/\\/+$/u, "");
+  if (!trimmed || path === trimmed || path.startsWith(\`\${trimmed}/\`)) {
+    return path;
+  }
+  return path === "/" ? trimmed : \`\${trimmed}\${path}\`;
+};
+const logicalRoute = i18n ? stripLocale(stripMount(route), locale) : route;
 const localeSwitch = i18n
   ? i18n.locales.map((l) => {
       const alt = (alternates ?? []).find((x) => x.locale === l.code);
@@ -1984,7 +2010,7 @@ const localeSwitch = i18n
         code: l.code,
         current: l.code === locale,
         dir: l.dir,
-        href: alt ? alt.path : localizeRoute(logicalRoute, l.code),
+        href: alt ? alt.path : applyMount(localizeRoute(logicalRoute, l.code)),
         label: l.label,
         untranslated: !alt,
       };
