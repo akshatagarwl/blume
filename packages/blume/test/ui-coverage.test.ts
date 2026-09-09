@@ -12,6 +12,7 @@ import {
   flattenPages,
   getPagination,
 } from "../src/components/layout/nav-utils.ts";
+import { searchLocaleFor } from "../src/components/layout/search-locale.ts";
 import { createSearch } from "../src/components/layout/search/endpoint.ts";
 import type { IndexedDocument } from "../src/components/layout/search/types.ts";
 import {
@@ -581,6 +582,42 @@ describe("layout chrome sources", () => {
     expect(source).toContain('href="#blume-content"');
     expect(source).toContain('id="blume-content"');
     expect(source).toContain("{strings.page.skipToContent}");
+  });
+
+  it("scopes search to the page locale from the i18n snapshot in every shell", async () => {
+    // The switcher list only exists on catch-all content pages; deriving the
+    // search locale from it left custom pages, the changelog index, the 404
+    // page, and the reference shell searching every language.
+    const shells = [
+      "PageLayout.astro",
+      "RootLayout.astro",
+      "ReferenceLayout.astro",
+    ];
+    const sources = await Promise.all(shells.map(layoutSource));
+    for (const source of sources) {
+      expect(source).toContain(
+        'import { searchLocaleFor } from "./search-locale.ts";'
+      );
+      expect(source).toContain(
+        "const searchLocale = searchLocaleFor(data.config.i18n, locale);"
+      );
+      expect(source).toContain("searchLocale={searchLocale}");
+      expect(source).not.toContain("localeSwitch.length > 1 ? locale");
+    }
+  });
+});
+
+describe("searchLocaleFor", () => {
+  it("returns the locale on a multi-locale site", () => {
+    const i18n = { locales: [{ code: "en" }, { code: "de" }] };
+    expect(searchLocaleFor(i18n, "de")).toBe("de");
+  });
+
+  it("disables scoping without i18n or with a single locale", () => {
+    expect(searchLocaleFor(null, "en")).toBeUndefined();
+    expect(
+      searchLocaleFor({ locales: [{ code: "en" }] }, "en")
+    ).toBeUndefined();
   });
 });
 

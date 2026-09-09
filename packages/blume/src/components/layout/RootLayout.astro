@@ -58,6 +58,7 @@ import {
 } from "./nav-utils.ts";
 import NavTree from "./NavTree.astro";
 import { resolveSlot } from "./overrides.ts";
+import { searchLocaleFor } from "./search-locale.ts";
 import PageActions from "./PageActions.astro";
 import PageFeedback from "./PageFeedback.astro";
 import Pagination from "./Pagination.astro";
@@ -289,9 +290,10 @@ const strings = ui ?? EN_UI;
 const navStrings = { ...EN_UI.nav, ...strings.nav };
 const actionStrings = { ...EN_UI.actions, ...strings.actions };
 const contentStrings = { ...EN_UI.content, ...strings.content };
-// Filter search to the active language only when the site is multi-locale.
-const searchLocale =
-  localeSwitch && localeSwitch.length > 1 ? locale : undefined;
+// Scope search to the active language on a multi-locale site. Read from the
+// i18n snapshot, not the switcher list, so pages rendered without one still
+// filter (see `searchLocaleFor`).
+const searchLocale = searchLocaleFor(data.config.i18n, locale);
 // TOC entries: the configured heading range, or none when the TOC is disabled
 // (an empty list makes TableOfContents render nothing).
 // API operation pages own a two-column body (docs + request panel) and their own

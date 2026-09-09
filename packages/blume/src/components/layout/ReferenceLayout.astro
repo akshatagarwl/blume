@@ -1,5 +1,6 @@
 ---
 import "blume:theme";
+import data from "blume:data";
 import type { BlumeFavicon } from "../../core/data.ts";
 import { EN_UI } from "../../core/i18n-ui.ts";
 import type { UIStrings } from "../../core/i18n-ui.ts";
@@ -16,6 +17,7 @@ import {
   THEME_INIT_SCRIPT,
 } from "./head-scripts.ts";
 import Header from "./Header.astro";
+import { searchLocaleFor } from "./search-locale.ts";
 
 // A minimal shell for the Scalar API/AsyncAPI reference: Blume's banner + navbar
 // on top, then a full-height region the reference mounts into. Unlike RootLayout
@@ -91,6 +93,8 @@ const {
 } = Astro.props;
 
 const strings = ui ?? EN_UI;
+// Scope search to the reference page's language on a multi-locale site.
+const searchLocale = searchLocaleFor(data.config.i18n, locale);
 
 const bannerKey = banner?.dismissible ? banner.key : null;
 ---
@@ -126,6 +130,7 @@ const bannerKey = banner?.dismissible ? banner.key : null;
       navigation={navigation}
       route={route}
       searchEnabled={searchEnabled}
+      searchLocale={searchLocale}
       site={site}
     />
     <div

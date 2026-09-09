@@ -35,6 +35,7 @@ import {
 import { buildStructuredData } from "../../seo/jsonld.ts";
 import { normalizeXHandle } from "../../seo/x-handle.ts";
 import { withBase } from "../islands/base-path.ts";
+import { searchLocaleFor } from "./search-locale.ts";
 import "blume:theme";
 import { ClientRouter } from "astro:transitions";
 import Analytics from "./Analytics.astro";
@@ -160,9 +161,10 @@ const strings = ui ?? EN_UI;
 // from a not-yet-regenerated snapshot) still renders instead of coming out
 // blank — the PageActions pattern.
 const navStrings = { ...EN_UI.nav, ...strings.nav };
-// Filter search to the active language only when the site is multi-locale.
-const searchLocale =
-  localeSwitch && localeSwitch.length > 1 ? locale : undefined;
+// Scope search to the active language on a multi-locale site. Read from the
+// i18n snapshot, not the switcher list, so pages rendered without one still
+// filter (see `searchLocaleFor`).
+const searchLocale = searchLocaleFor(data.config.i18n, locale);
 const pageTitle = page?.title ?? site.title;
 const description = page?.description ?? site.description;
 const route = page?.route ?? "/";
