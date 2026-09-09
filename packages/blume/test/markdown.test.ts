@@ -89,8 +89,10 @@ describe(calloutTypeFor, () => {
 describe(toPackageCommands, () => {
   it("treats a bare package list as an install", () => {
     expect(toPackageCommands("react react-dom")).toStrictEqual({
+      aube: "aube add react react-dom",
       bun: "bun add react react-dom",
       npm: "npm install react react-dom",
+      nub: "nub add react react-dom",
       pnpm: "pnpm add react react-dom",
       yarn: "yarn add react react-dom",
     });
@@ -98,8 +100,10 @@ describe(toPackageCommands, () => {
 
   it("converts an explicit npm install with a dev flag", () => {
     expect(toPackageCommands("npm i -D typescript")).toStrictEqual({
+      aube: "aube add -D typescript",
       bun: "bun add -D typescript",
       npm: "npm install -D typescript",
+      nub: "nub add -D typescript",
       pnpm: "pnpm add -D typescript",
       yarn: "yarn add -D typescript",
     });
@@ -113,8 +117,10 @@ describe(toPackageCommands, () => {
 
   it("handles a bare `npm install` as install-all", () => {
     expect(toPackageCommands("npm install")).toStrictEqual({
+      aube: "aube install",
       bun: "bun install",
       npm: "npm install",
+      nub: "nub install",
       pnpm: "pnpm install",
       yarn: "yarn install",
     });
@@ -124,8 +130,10 @@ describe(toPackageCommands, () => {
     // The yarn tab is pinned to Berry, which removed `global`
     // (yarnpkg/berry#821) — its honest global command is npm's.
     expect(toPackageCommands("yarn global add typescript")).toStrictEqual({
+      aube: "aube add -g typescript",
       bun: "bun add -g typescript",
       npm: "npm install -g typescript",
+      nub: "nub add -g typescript",
       pnpm: "pnpm add -g typescript",
       yarn: "npm install -g typescript",
     });
@@ -144,8 +152,10 @@ describe(toPackageCommands, () => {
 
   it("maps npx to each manager's exec command", () => {
     expect(toPackageCommands("npx astro add react")).toStrictEqual({
+      aube: "aube dlx astro add react",
       bun: "bunx astro add react",
       npm: "npx astro add react",
+      nub: "nubx astro add react",
       pnpm: "pnpm dlx astro add react",
       yarn: "yarn dlx astro add react",
     });
@@ -153,8 +163,10 @@ describe(toPackageCommands, () => {
 
   it("maps create/init", () => {
     expect(toPackageCommands("npm create astro@latest")).toStrictEqual({
+      aube: "aube create astro@latest",
       bun: "bun create astro@latest",
       npm: "npm create astro@latest",
+      nub: "nub create astro@latest",
       pnpm: "pnpm create astro@latest",
       yarn: "yarn create astro@latest",
     });
@@ -162,8 +174,10 @@ describe(toPackageCommands, () => {
 
   it("routes global installs through each manager's global command", () => {
     expect(toPackageCommands("npm i -g vercel")).toStrictEqual({
+      aube: "aube add -g vercel",
       bun: "bun add -g vercel",
       npm: "npm install -g vercel",
+      nub: "nub add -g vercel",
       pnpm: "pnpm add -g vercel",
       yarn: "npm install -g vercel",
     });
@@ -171,8 +185,10 @@ describe(toPackageCommands, () => {
 
   it("maps uninstall to remove", () => {
     expect(toPackageCommands("npm uninstall lodash")).toStrictEqual({
+      aube: "aube remove lodash",
       bun: "bun remove lodash",
       npm: "npm uninstall lodash",
+      nub: "nub remove lodash",
       pnpm: "pnpm remove lodash",
       yarn: "yarn remove lodash",
     });
@@ -184,8 +200,10 @@ describe(toPackageCommands, () => {
 
   it("routes a global uninstall through each manager's global command", () => {
     expect(toPackageCommands("npm uninstall -g eslint")).toStrictEqual({
+      aube: "aube remove -g eslint",
       bun: "bun remove -g eslint",
       npm: "npm uninstall -g eslint",
+      nub: "nub remove -g eslint",
       pnpm: "pnpm remove --global eslint",
       yarn: "npm uninstall -g eslint",
     });
@@ -195,8 +213,10 @@ describe(toPackageCommands, () => {
     // Yarn gets Berry's `--immutable` (`--frozen-lockfile` was removed in
     // Yarn 4), consistent with the Berry-only `yarn dlx` the exec case emits.
     expect(toPackageCommands("npm ci")).toStrictEqual({
+      aube: "aube install --frozen-lockfile",
       bun: "bun install --frozen-lockfile",
       npm: "npm ci",
+      nub: "nub install --frozen-lockfile",
       pnpm: "pnpm install --frozen-lockfile",
       yarn: "yarn install --immutable",
     });
@@ -1454,6 +1474,18 @@ describe("toPackageCommands (verb and flag normalization)", () => {
     expect(toPackageCommands("pnpm exec astro").pnpm).toBe("pnpm dlx astro");
     expect(toPackageCommands("pnpm dlx astro").yarn).toBe("yarn dlx astro");
     expect(toPackageCommands("bun x astro").bun).toBe("bunx astro");
+    expect(toPackageCommands("nubx astro").pnpm).toBe("pnpm dlx astro");
+    expect(toPackageCommands("nub exec astro").nub).toBe("nubx astro");
+    expect(toPackageCommands("aube dlx astro").bun).toBe("bunx astro");
+  });
+
+  it("accepts nub and aube as explicit input managers", () => {
+    expect(toPackageCommands("nub add -D typescript").npm).toBe(
+      "npm install -D typescript"
+    );
+    expect(toPackageCommands("aube remove lodash").yarn).toBe(
+      "yarn remove lodash"
+    );
   });
 
   it("recognizes every remove alias", () => {

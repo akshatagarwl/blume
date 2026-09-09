@@ -2,7 +2,14 @@ import type { Agent, Command } from "package-manager-detector";
 import { resolveCommand } from "package-manager-detector/commands";
 
 /** Supported package managers, in the order tabs are displayed. */
-export const PACKAGE_MANAGERS = ["npm", "pnpm", "yarn", "bun"] as const;
+export const PACKAGE_MANAGERS = [
+  "npm",
+  "pnpm",
+  "yarn",
+  "bun",
+  "nub",
+  "aube",
+] as const;
 
 export type PackageManager = (typeof PACKAGE_MANAGERS)[number];
 
@@ -15,14 +22,29 @@ export type PackageManager = (typeof PACKAGE_MANAGERS)[number];
  * npm's form, matching `ni`'s table.
  */
 const AGENT_FOR = {
+  aube: "aube",
   bun: "bun",
   npm: "npm",
+  nub: "nub",
   pnpm: "pnpm",
   yarn: "yarn@berry",
 } satisfies Record<PackageManager, Agent>;
 
 /** Words that mark the input as an explicit command rather than a bare list. */
-const MANAGER_PREFIXES = new Set(["bun", "bunx", "npm", "npx", "pnpm", "yarn"]);
+const MANAGER_PREFIXES = new Set([
+  "aube",
+  "bun",
+  "bunx",
+  "npm",
+  "npx",
+  "nub",
+  "nubx",
+  "pnpm",
+  "yarn",
+]);
+
+/** Standalone runner binaries that spell `<manager> exec` as one word. */
+const EXEC_BINARIES = new Set(["bunx", "npx", "nubx"]);
 
 const WHITESPACE = /\s+/u;
 const WHITESPACE_RUN = /\s+/gu;
@@ -104,7 +126,7 @@ const parseIntent = (input: string): Intent => {
   if (!MANAGER_PREFIXES.has(first)) {
     return { args: normalizeFlags(tokens), operation: "add" };
   }
-  if (first === "npx" || first === "bunx") {
+  if (EXEC_BINARIES.has(first)) {
     return { args: rest, operation: "exec" };
   }
 
@@ -193,8 +215,10 @@ export const toPackageCommands = (input: string) => {
   const normalize = (command: string): string =>
     command.replaceAll(WHITESPACE_RUN, " ").trim();
   return {
+    aube: normalize(buildCommand("aube", intent)),
     bun: normalize(buildCommand("bun", intent)),
     npm: normalize(buildCommand("npm", intent)),
+    nub: normalize(buildCommand("nub", intent)),
     pnpm: normalize(buildCommand("pnpm", intent)),
     yarn: normalize(buildCommand("yarn", intent)),
   } satisfies Record<PackageManager, string>;
