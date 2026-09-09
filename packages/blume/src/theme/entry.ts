@@ -1,5 +1,13 @@
 import { CODE_PADDING_BLOCK_REM } from "./code-block-padding.ts";
 
+/**
+ * Bottom inset of the scrolling code element, in rem: keeps a horizontal
+ * scrollbar thumb off the last line's descenders. It is carved out of the
+ * pre's block padding rather than added to it, so a block's height is the
+ * same whether or not it scrolls.
+ */
+const CODE_SCROLL_INSET_REM = 0.375;
+
 interface TailwindEntryOptions {
   /**
    * Globs to scan for utility classes. Typically the Blume package source and
@@ -495,14 +503,23 @@ blume-diff {
   max-height: 24rem;
   overflow: auto;
   /* The small bottom inset keeps the horizontal thumb off the last line's
-     descenders now that scrollbars are visible. */
-  padding: 0 1.25rem 0.375rem;
+     descenders now that scrollbars are visible. The pre gives up the same
+     amount below (next rule), so the inset adds no height to the block. */
+  padding: 0 1.25rem ${CODE_SCROLL_INSET_REM}rem;
   /* Thin theme-colored scrollbars, matching the sidebar treatment, so a
      height-capped block reads as scrollable instead of simply ending.
      Safari before 18.2 supports neither property and falls back to the
      platform-default scrollbar — acceptable, since macOS overlays it. */
   scrollbar-color: var(--blume-border) transparent;
   scrollbar-width: thin;
+}
+
+/* The scroller's bottom inset comes out of the pre's own block padding: the
+   text still sits one full inset above the frame's bottom edge, the thumb sits
+   in the gap, and a one-line command is no taller than it was before the
+   scroller existed. */
+.prose :where(pre:not(.twoslash, .twoslash pre, blume-panel-tabs *):has(> code)) {
+  padding-bottom: calc(${CODE_PADDING_BLOCK_REM}rem - ${CODE_SCROLL_INSET_REM}rem);
 }
 
 /* The dark border token is too close to the page background to read as a
